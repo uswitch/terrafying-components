@@ -48,5 +48,15 @@ RSpec.describe Terrafying::Components::DynamicSet do
     output = dynamic_set.output_with_children
     template_body = JSON.parse(output["resource"]["aws_cloudformation_stack"].values.first[:template_body])
     expect(template_body["Resources"]["AutoScalingGroup"]["UpdatePolicy"]["AutoScalingRollingUpdate"]).not_to be_nil
+    expect(template_body["Resources"]["AutoScalingGroup"]["UpdatePolicy"]["AutoScalingRollingUpdate"]["WaitOnResourceSignals"]).to be_falsey
+  end
+
+  it "should expect a signal when configured" do
+    dynamic_set = Terrafying::Components::DynamicSet.create_in(@vpc, "foo", { rolling_update: :signal })
+
+    output = dynamic_set.output_with_children
+    template_body = JSON.parse(output["resource"]["aws_cloudformation_stack"].values.first[:template_body])
+
+    expect(template_body["Resources"]["AutoScalingGroup"]["UpdatePolicy"]["AutoScalingRollingUpdate"]["WaitOnResourceSignals"]).to be true
   end
 end
