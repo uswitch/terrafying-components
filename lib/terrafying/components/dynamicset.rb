@@ -45,7 +45,7 @@ module Terrafying
           subnets: vpc.subnets.fetch(:private, []),
           pivot: false,
           depends_on: [],
-          rolling_update: true,
+          rolling_update: :simple,
         }.merge(options)
 
         ident = "#{tf_safe(vpc.name)}-#{name}"
@@ -180,7 +180,16 @@ module Terrafying
           },
         }
 
-        if rolling_update
+        if rolling_update == :signal
+          template[:Resources][:AutoScalingGroup][:UpdatePolicy] = {
+            AutoScalingRollingUpdate: {
+              MinInstancesInService: "#{instances[:min]}",
+              MaxBatchSize: "1",
+              PauseTime: "PT10M",
+              WaitOnResourceSignals: true,
+            }
+          }
+        elsif rolling_update
           template[:Resources][:AutoScalingGroup][:UpdatePolicy] = {
             AutoScalingRollingUpdate: {
               MinInstancesInService: "#{instances[:min]}",
