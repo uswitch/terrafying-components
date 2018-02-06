@@ -183,8 +183,8 @@ module Terrafying
         if rolling_update == :signal
           template[:Resources][:AutoScalingGroup][:UpdatePolicy] = {
             AutoScalingRollingUpdate: {
-              MinInstancesInService: "#{instances[:min]}",
-              MaxBatchSize: "1",
+              MinInstancesInService: "#{instances[:desired]}",
+              MaxBatchSize: "#{instances[:desired]}",
               PauseTime: "PT10M",
               WaitOnResourceSignals: true,
             }
