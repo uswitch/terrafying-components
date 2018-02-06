@@ -8,7 +8,8 @@ RSpec.describe Terrafying::Components::DynamicSet do
   it_behaves_like "a usable resource"
 
   before do
-    @vpc = stub_vpc("a-vpc", "10.0.0.0/16")
+    @aws = double("AWS")
+    @vpc = stub_vpc("a-vpc", "10.0.0.0/16", aws: @aws)
   end
 
   it "should just create a single asg template by default" do
@@ -52,5 +53,19 @@ RSpec.describe Terrafying::Components::DynamicSet do
     template_body = JSON.parse(output["resource"]["aws_cloudformation_stack"].values.first[:template_body])
 
     expect(template_body["Resources"]["AutoScalingGroup"]["UpdatePolicy"]["AutoScalingRollingUpdate"]["WaitOnResourceSignals"]).to be true
+  end
+
+  it "should track what the ASG is configured as" do
+    asg = Aws::AutoScaling::Types::AutoScalingGroup.new(min_size: 3, max_size: 10, desired_capacity: 6)
+    allow(@aws).to receive(:asgs_by_tags).and_return([asg])
+
+    dynamic_set = Terrafying::Components::DynamicSet.create_in(@vpc, "foo", { instances: { min: 1, max: 1, desired: 1, track: true } })
+
+    output = dynamic_set.output_with_children
+    template_body = JSON.parse(output["resource"]["aws_cloudformation_stack"].values.first[:template_body])
+
+    expect(template_body["Resources"]["AutoScalingGroup"]["Properties"]["MaxSize"]).to eq(asg.max_size.to_s)
+    expect(template_body["Resources"]["AutoScalingGroup"]["Properties"]["MinSize"]).to eq(asg.min_size.to_s)
+    expect(template_body["Resources"]["AutoScalingGroup"]["Properties"]["DesiredCapacity"]).to eq(asg.desired_capacity.to_s)
   end
 end

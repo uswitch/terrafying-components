@@ -1,6 +1,7 @@
+require 'terrafying/components/vpc'
 
 def stub_vpc(name, cidr, options={})
-  aws_double = double("AWS")
+  aws_double = options.fetch(:aws, double("AWS"))
 
   allow(aws_double).to receive(:account_id).and_return("1234")
   allow(aws_double).to receive(:region).and_return("eu-west-1")

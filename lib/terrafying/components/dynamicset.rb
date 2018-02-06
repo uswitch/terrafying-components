@@ -88,6 +88,12 @@ module Terrafying
                                    depends_on: options[:instance_profile] ? options[:instance_profile].resource_names : [],
                                  }
 
+        if options[:instances][:track]
+          instances = instances_by_tags(Name: ident)
+          if instances
+            options[:instances] = options[:instances].merge(instances)
+          end
+        end
 
         if options.has_key?(:health_check)
           raise 'Health check needs a type and grace_period' if ! options[:health_check].has_key?(:type) and ! options[:health_check].has_key?(:grace_period)
@@ -190,6 +196,27 @@ module Terrafying
         end
 
         JSON.pretty_generate(template)
+      end
+
+      def instances_by_tags(tags = {})
+        begin
+          asgs = aws.asgs_by_tags(Name: tf_safe("#{name}-nodes"))
+
+          if asgs.count != 1
+            raise "Didn't find only one ASG :("
+          end
+
+          instances = {
+            min: asgs[0].min_size,
+            max: asgs[0].max_size,
+            desired: asgs[0].desired_capacity,
+          }
+        rescue RuntimeError => err
+          $stderr.puts("instances_by_tags: #{err}")
+          instances = nil
+        end
+
+        instances
       end
     end
 
