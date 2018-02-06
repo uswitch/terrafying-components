@@ -9,7 +9,7 @@ module Terrafying
 
     class DynamicSet < Terrafying::Context
 
-      attr_reader :name, :asgs
+      attr_reader :name, :asg
 
       include Usable
 
@@ -43,7 +43,6 @@ module Terrafying
           tags: {},
           ssh_group: vpc.ssh_group,
           subnets: vpc.subnets.fetch(:private, []),
-          pivot: false,
           depends_on: [],
           rolling_update: :simple,
         }.merge(options)
@@ -102,31 +101,22 @@ module Terrafying
         end
         tags = { Name: ident, service_name: name,}.merge(options[:tags]).map { |k,v| { Key: k, Value: v, PropagateAtLaunch: true }}
 
-        if options[:pivot]
-          @asgs = options[:subnets].map.with_index { |subnet, i|
-            resource :aws_cloudformation_stack, "#{ident}-#{i}",{
-              name: "#{ident}-#{i}",
-              disable_rollback: true,
-              template_body: generate_template(options[:health_check], options[:instances], launch_config, [subnet.id], tags, options[:rolling_update])
-            }
-            output_of(:aws_cloudformation_stack, "#{ident}-#{i}", 'outputs["AsgName"]')
-          }
-        else
-          asg = resource :aws_cloudformation_stack, ident, {
-                  name: ident,
-                  disable_rollback: true,
-                  template_body: generate_template(options[:health_check], options[:instances], launch_config, options[:subnets].map(&:id), tags, options[:rolling_update])
-          }
-          @asgs = [output_of(:aws_cloudformation_stack, ident, 'outputs["AsgName"]')]
-        end
+        @asg = resource :aws_cloudformation_stack, ident, {
+                          name: ident,
+                          disable_rollback: true,
+                          template_body: generate_template(
+                            options[:health_check], options[:instances], launch_config,
+                            options[:subnets].map(&:id), tags, options[:rolling_update]
+                          ),
+                        }
 
         self
       end
 
       def attach_load_balancer(load_balancer)
-        @asgs.product(load_balancer.target_groups).each.with_index { |(asg, target_group), i|
+        load_balancer.target_groups.each.with_index { |target_group, i|
           resource :aws_autoscaling_attachment, "#{load_balancer.name}-#{@name}-#{i}", {
-                     autoscaling_group_name: asg,
+                     autoscaling_group_name: @asg,
                      alb_target_group_arn: target_group
                    }
         }

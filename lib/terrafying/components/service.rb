@@ -53,7 +53,6 @@ module Terrafying
           tags: {},
           ssh_group: vpc.ssh_group,
           subnets: vpc.subnets.fetch(:private, []),
-          pivot: false,
           startup_grace_period: 300,
           depends_on: [],
         }.merge(options)
