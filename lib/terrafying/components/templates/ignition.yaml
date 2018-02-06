@@ -29,62 +29,6 @@ systemd:
         Type=ext4
     <% } %>
 
-    - name: "set-hostname.service"
-      enabled: true
-      contents: |
-        [Install]
-        WantedBy=multi-user.target
-
-        [Unit]
-        Description=Sets the hostname of the machine
-        Before=docker.service
-        After=network-online.target coreos-metadata.service
-        Requires=network-online.target coreos-metadata.service
-
-        [Service]
-        EnvironmentFile=/run/metadata/coreos
-        ExecStart=/opt/bin/set-hostname
-        Restart=always
-        RestartSec=30
-
-    - name: "usersync.service"
-      enabled: true
-      contents: |
-        [Install]
-        WantedBy=multi-user.target
-
-        [Unit]
-        Description=AWS user ssh key syncing
-        After=network-online.target
-        Requires=network-online.target
-
-        [Service]
-        ExecStart=/opt/bin/usersync -I="root,core,fleet,systemd-coredump" -o=false -i=5 -g="<%= ssh_group %>"
-
-        Restart=always
-        RestartSec=30
-
-    - name: "download-certs.service"
-      enabled: true
-      contents: |
-        [Install]
-        WantedBy=multi-user.target
-
-        [Unit]
-        Description=Download certs required by services
-        Before=docker.service
-        After=network-online.target
-        Requires=network-online.target
-
-        [Service]
-        ExecStart=/opt/bin/s3-downloader --region "<%= region %>" <% cas.each { |ca| %>\
-        <%= ca.source %>:/etc/ssl/<%= ca.name %>/ca.cert:0444 <% } %><% keypairs.each { |keypair| %>\
-        <%= keypair[:source][:cert] %>:/etc/ssl/<%= keypair[:ca].name %>/<%= keypair[:name] %>/cert:0444 \
-        <%= keypair[:source][:key] %>:/etc/ssl/<%= keypair[:ca].name %>/<%= keypair[:name] %>/key:0444 <% } %>
-
-        Restart=always
-        RestartSec=30
-
     <% units.each { |unit| %>
     - name: "<%= unit[:name] %>"
       enabled: true<% if unit.has_key?(:contents) %>
@@ -118,31 +62,21 @@ storage:
     <% } %>
 
     - filesystem: "root"
-      path: "/opt/bin/set-hostname"
-      mode: 0755,
-      user: { id: 0 }
-      group: { id: 0}
+      path:  '/etc/usersync.env'
+      mode:  0644
+      user:  { id: 0 }
+      group: { id: 0 }
       contents: |
-        #!/bin/bash
-        ec2_host="$(echo ${COREOS_EC2_HOSTNAME} | cut -d'.' -f 1)"
-        echo "${ec2_host}.${COREOS_EC2_REGION}.compute.internal" > /etc/hostname
-        echo "MACHINE_HOSTNAME=$(cat /etc/hostname)" >> /etc/environment
-        hostnamectl set-hostname "$(cat /etc/hostname)"
-        systemctl daemon-reload
+        USERSYNC_SSH_GROUP="<%= ssh_group %>"
 
     - filesystem: "root"
-      path: "/etc/motd.d/uswitch.conf"
-      mode: 0644,
-      user: { id: 0 }
-      group: { id: 0}
+      path:  '/etc/s3-download.d/certs.conf'
+      mode:  0644
+      user:  { id: 0 }
+      group: { id: 0 }
       contents: |
-
-          $$$$$        $$$$$
-          $$$$$        $$$$$
-          $$$$$        $$$$$
-          $$$$$        $$$$$
-          $$$$$        $$$$$
-          $$$$$     .  $$$$$
-          $$$$$.   .$a $$$$$
-          `$$$$$$aaaPIL. $$$
-          ^$$$$$$$'$$^ $$$$.
+        <% cas.each { |ca| %><%= ca.source %>:/etc/ssl/<%= ca.name %>/ca.cert:0444 <% } %>
+        <% keypairs.each do |keypair| %>
+        <%= keypair[:source][:cert] %>:/etc/ssl/<%= keypair[:ca].name %>/<%= keypair[:name] %>/cert:0444
+        <%= keypair[:source][:key] %>:/etc/ssl/<%= keypair[:ca].name %>/<%= keypair[:name] %>/key:0444
+        <% end %>

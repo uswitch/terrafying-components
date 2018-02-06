@@ -1,3 +1,4 @@
+require 'base64'
 require 'terrafying'
 require 'terrafying/components/ignition'
 
@@ -143,37 +144,39 @@ RSpec.describe Terrafying::Components::Ignition, '#generate' do
            end).to be true
   end
 
-  it "passes through the ssh_group" do
+  it 'passes through the ssh_group' do
     user_data = Terrafying::Components::Ignition.generate(
       {
-        ssh_group: "smurfs",
+        ssh_group: 'smurfs'
       }
     )
 
-    units = JSON.parse(user_data, { symbolize_names: true })[:systemd][:units]
+    files = JSON.parse(user_data, { symbolize_names: true })[:storage][:files]
 
-    usersync_unit = units.select { |u| u[:name] == "usersync.service" }.first
+    conf_file = files.find { |f| f[:path] == '/etc/usersync.env' }
+    conf_content = Base64.decode64(conf_file[:contents][:source].sub(/^[^,]*,/, ''))
 
-    expect(usersync_unit[:contents]).to match(/-g="smurfs"/)
+    expect(conf_content).to match(/USERSYNC_SSH_GROUP="smurfs"/)
   end
 
-  it "setups keypairs/cas properly" do
-    ca = Terrafying::Components::SelfSignedCA.create("great-ca", "some-bucket")
-    keypair = ca.create_keypair("foo")
+  it 'setups keypairs/cas properly' do
+    ca = Terrafying::Components::SelfSignedCA.create('great-ca', 'some-bucket')
+    keypair = ca.create_keypair('foo')
 
     user_data = Terrafying::Components::Ignition.generate(
       {
-        keypairs: [ keypair ],
+        keypairs: [keypair]
       }
     )
 
-    units = JSON.parse(user_data, { symbolize_names: true })[:systemd][:units]
+    files = JSON.parse(user_data, { symbolize_names: true })[:storage][:files]
 
-    certs_unit = units.select { |u| u[:name] == "download-certs.service" }.first
+    conf_file = files.find { |f| f[:path] == '/etc/s3-download.d/certs.conf' }
+    conf_content = Base64.decode64(conf_file[:contents][:source].sub(/^[^,]*,/, ''))
 
-    paths = certs_unit[:contents].scan(/\/etc\/ssl\/[^\/]+\/[a-z\.]+[\/\.][a-z\.]+/)
+    paths = conf_content.scan(%r{/etc/ssl/[^/]+/[a-z\.]+[/\.][a-z\.]+})
 
-    expect(paths).to include("/etc/ssl/great-ca/ca.cert", "/etc/ssl/great-ca/foo/key", "/etc/ssl/great-ca/foo/cert")
+    expect(paths).to include('/etc/ssl/great-ca/ca.cert', '/etc/ssl/great-ca/foo/key', '/etc/ssl/great-ca/foo/cert')
   end
 
   context "validation" do
