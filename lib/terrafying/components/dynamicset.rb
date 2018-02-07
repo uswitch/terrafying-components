@@ -107,14 +107,16 @@ module Terrafying
         end
         tags = { Name: ident, service_name: name,}.merge(options[:tags]).map { |k,v| { Key: k, Value: v, PropagateAtLaunch: true }}
 
-        @asg = resource :aws_cloudformation_stack, ident, {
-                          name: ident,
-                          disable_rollback: true,
-                          template_body: generate_template(
-                            options[:health_check], options[:instances], launch_config,
-                            options[:subnets].map(&:id), tags, options[:rolling_update]
-                          ),
-                        }
+        asg = resource :aws_cloudformation_stack, ident, {
+                         name: ident,
+                         disable_rollback: true,
+                         template_body: generate_template(
+                           options[:health_check], options[:instances], launch_config,
+                           options[:subnets].map(&:id), tags, options[:rolling_update]
+                         ),
+                       }
+
+        @asg = output_of(:aws_cloudformation_stack, ident, 'outputs["AsgName"]')
 
         self
       end
