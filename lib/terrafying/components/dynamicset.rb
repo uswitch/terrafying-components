@@ -202,7 +202,7 @@ module Terrafying
 
       def instances_by_tags(tags = {})
         begin
-          asgs = aws.asgs_by_tags(Name: tf_safe("#{name}-nodes"))
+          asgs = aws.asgs_by_tags(tags)
 
           if asgs.count != 1
             raise "Didn't find only one ASG :("
