@@ -9,13 +9,13 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    aws-sdk (2.10.126)
-      aws-sdk-resources (= 2.10.126)
-    aws-sdk-core (2.10.126)
+    aws-sdk (2.10.131)
+      aws-sdk-resources (= 2.10.131)
+    aws-sdk-core (2.10.131)
       aws-sigv4 (~> 1.0)
       jmespath (~> 1.0)
-    aws-sdk-resources (2.10.126)
-      aws-sdk-core (= 2.10.126)
+    aws-sdk-resources (2.10.131)
+      aws-sdk-core (= 2.10.131)
     aws-sigv4 (1.0.2)
     deep_merge (1.1.1)
     diff-lcs (1.3)
@@ -35,7 +35,7 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.7.0)
     rspec-support (3.7.1)
-    terrafying (1.2.2)
+    terrafying (1.2.3)
       aws-sdk (~> 2)
       deep_merge (~> 1.1.1)
       netaddr (~> 1.5)
