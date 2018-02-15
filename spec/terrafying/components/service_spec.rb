@@ -251,7 +251,7 @@ RSpec.describe Terrafying::Components::Service do
 
       binding_rules = output["resource"].fetch("aws_security_group_rule", {}).values.select { |r|
         r[:security_group_id] == service_b.load_balancer.ingress_security_group && \
-        r[:source_security_group_id] = service.instance_set.egress_security_group
+        r[:source_security_group_id] == service.instance_set.egress_security_group
       }
 
       expect(binding_rules.count).to eq(service.ports.count)
