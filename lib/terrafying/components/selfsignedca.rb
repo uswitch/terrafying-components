@@ -55,20 +55,50 @@ module Terrafying
                    ],
                  }
 
-        resource :aws_s3_bucket_object, "#{@name}-cert", {
-                   bucket: @bucket,
-                   key: File.join(@prefix, @name, "ca.cert"),
-                   content: output_of(:tls_self_signed_cert, @ident, :cert_pem),
-                 }
-
         @source = File.join("s3://", @bucket, @prefix, @name, "ca.cert")
 
         @ca_key = output_of(:tls_private_key, @ident, :private_key_pem)
         @ca_cert = output_of(:tls_self_signed_cert, @ident, :cert_pem)
 
+        resource :aws_s3_bucket_object, "#{@name}-cert", {
+                   bucket: @bucket,
+                   key: File.join(@prefix, @name, "ca.cert"),
+                   content: @ca_cert,
+                 }
+
         self
       end
 
+      def keypair
+        resource :aws_s3_bucket_object, "#{@name}-key", {
+                   bucket: @bucket,
+                   key: File.join(@prefix, @name, "ca.key"),
+                   content: @ca_key,
+                 }
+
+        {
+          ca: self,
+          source: {
+            cert: File.join("s3://", @bucket, @prefix, @name, "ca.cert"),
+            key: File.join("s3://", @bucket, @prefix, @name, "ca.key"),
+          },
+          resources: [
+            "aws_s3_bucket_object.#{@name}-key",
+            "aws_s3_bucket_object.#{@name}-cert"
+          ],
+          iam_statement: {
+            Effect: "Allow",
+            Action: [
+              "s3:GetObjectAcl",
+              "s3:GetObject",
+            ],
+            Resource: [
+              "arn:aws:s3:::#{File.join(@bucket, @prefix, @name, "ca.cert")}",
+              "arn:aws:s3:::#{File.join(@bucket, @prefix, @name, "ca.key")}",
+            ]
+          }
+        }
+      end
 
       def create_keypair_in(ctx, name, options={})
         options = {
