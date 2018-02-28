@@ -1,6 +1,8 @@
 require 'base64'
 require 'terrafying'
 require 'terrafying/components/ignition'
+require 'terrafying/components/selfsignedca'
+require 'terrafying/util'
 
 
 RSpec.describe Terrafying::Components::Ignition, '#container_unit' do
@@ -159,24 +161,47 @@ RSpec.describe Terrafying::Components::Ignition, '#generate' do
     expect(conf_content).to match(/USERSYNC_SSH_GROUP="smurfs"/)
   end
 
-  it 'setups keypairs/cas properly' do
-    ca = Terrafying::Components::SelfSignedCA.create('great-ca', 'some-bucket')
-    keypair = ca.create_keypair('foo')
+  context "keypairs" do
 
-    user_data = Terrafying::Components::Ignition.generate(
-      {
-        keypairs: [keypair]
-      }
-    )
+    it 'setups keypairs/cas properly' do
+      ca = Terrafying::Components::SelfSignedCA.create('great-ca', 'some-bucket')
+      keypair = ca.create_keypair('foo')
 
-    files = JSON.parse(user_data, { symbolize_names: true })[:storage][:files]
+      user_data = Terrafying::Components::Ignition.generate(
+        {
+          keypairs: [keypair]
+        }
+      )
 
-    conf_file = files.find { |f| f[:path] == '/etc/s3-download.d/certs.conf' }
-    conf_content = Base64.decode64(conf_file[:contents][:source].sub(/^[^,]*,/, ''))
+      files = JSON.parse(user_data, { symbolize_names: true })[:storage][:files]
 
-    paths = conf_content.scan(%r{/etc/ssl/[^/]+/[a-z\.]+[/\.][a-z\.]+})
+      conf_file = files.find { |f| f[:path] == '/etc/s3-download.d/certs.conf' }
+      conf_content = Base64.decode64(conf_file[:contents][:source].sub(/^[^,]*,/, ''))
 
-    expect(paths).to include('/etc/ssl/great-ca/ca.cert', '/etc/ssl/great-ca/foo/key', '/etc/ssl/great-ca/foo/cert')
+      paths = conf_content.scan(%r{/etc/ssl/[^/]+/[a-z\.]+[/\.][a-z\.]+})
+
+      expect(paths).to include('/etc/ssl/great-ca/ca.cert', '/etc/ssl/great-ca/foo/key', '/etc/ssl/great-ca/foo/cert')
+    end
+
+    it 'handles ca keypairs' do
+      ca = Terrafying::Components::SelfSignedCA.create('great-ca', 'some-bucket')
+
+      user_data = Terrafying::Components::Ignition.generate(
+        {
+          keypairs: [ca.keypair]
+        }
+      )
+
+      files = JSON.parse(user_data, { symbolize_names: true })[:storage][:files]
+
+      conf_file = files.find { |f| f[:path] == '/etc/s3-download.d/certs.conf' }
+      conf_content = Base64.decode64(conf_file[:contents][:source].sub(/^[^,]*,/, ''))
+
+      paths = conf_content.scan(%r{/etc/ssl/[^/]+/[a-z\.]+[/\.][a-z\.]+})
+
+      expect(paths).to include('/etc/ssl/great-ca/ca.cert', '/etc/ssl/great-ca/ca.key')
+    end
+
   end
 
   context "validation" do
