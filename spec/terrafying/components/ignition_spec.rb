@@ -202,6 +202,42 @@ RSpec.describe Terrafying::Components::Ignition, '#generate' do
       expect(paths).to include('/etc/ssl/great-ca/ca.cert', '/etc/ssl/great-ca/ca.key')
     end
 
+    it 'shouldnt duplicate the ca.cert' do
+      ca = Terrafying::Components::SelfSignedCA.create('great-ca', 'some-bucket')
+
+      user_data = Terrafying::Components::Ignition.generate(
+        {
+          keypairs: [ca.keypair]
+        }
+      )
+
+      files = JSON.parse(user_data, { symbolize_names: true })[:storage][:files]
+
+      conf_file = files.find { |f| f[:path] == '/etc/s3-download.d/certs.conf' }
+      conf_content = Base64.decode64(conf_file[:contents][:source].sub(/^[^,]*,/, ''))
+
+      paths = conf_content.scan(%r{/etc/ssl/[^/]+/[a-z\.]+[/\.][a-z\.]+})
+
+      expect(paths.select {|path| path.end_with?("ca.cert") }.count).to eq(1)
+    end
+
+    it 'shouldnt have multiple entries in a line' do
+      ca = Terrafying::Components::SelfSignedCA.create('great-ca', 'some-bucket')
+      ca2 = Terrafying::Components::SelfSignedCA.create('another-great-ca', 'some-bucket')
+
+      user_data = Terrafying::Components::Ignition.generate({keypairs: [ca.keypair, ca2.keypair]})
+
+      files = JSON.parse(user_data, { symbolize_names: true })[:storage][:files]
+
+      conf_file = files.find { |f| f[:path] == '/etc/s3-download.d/certs.conf' }
+      conf_content = Base64.decode64(conf_file[:contents][:source].sub(/^[^,]*,/, ''))
+
+      lines = conf_content.split("\n")
+      lines_with_multiple_statements = lines.select { |l| l.split("/etc/ssl").count > 2 }
+
+      expect(lines_with_multiple_statements.count).to eq(0)
+    end
+
   end
 
   context "validation" do

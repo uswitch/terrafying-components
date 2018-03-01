@@ -75,13 +75,13 @@ storage:
       user:  { id: 0 }
       group: { id: 0 }
       contents: |
-        <% cas.each { |ca| %><%= ca.source %>:/etc/ssl/<%= ca.name %>/ca.cert:0444<% } %>
+        <% cas.each { |ca| %><%= ca.source %>:/etc/ssl/<%= ca.name %>/ca.cert:0444
+        <% } %>
         <% keypairs.each do |keypair| %>
         <% if keypair.has_key?(:name) %>
         <%= keypair[:source][:cert] %>:/etc/ssl/<%= keypair[:ca].name %>/<%= keypair[:name] %>/cert:0444
         <%= keypair[:source][:key] %>:/etc/ssl/<%= keypair[:ca].name %>/<%= keypair[:name] %>/key:0444
         <% else %>
-        <%= keypair[:source][:cert] %>:/etc/ssl/<%= keypair[:ca].name %>/ca.cert:0444
         <%= keypair[:source][:key] %>:/etc/ssl/<%= keypair[:ca].name %>/ca.key:0444
         <% end %>
         <% end %>
