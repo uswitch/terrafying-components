@@ -60,7 +60,41 @@ storage:
       group: { id: 0 }
       contents: "<%= file[:contents].gsub(/\n/, '\\n').gsub(/\"/, '\\"') %>"
     <% } %>
-
+    <% cas.each { |ca| %>
+    - filesystem: "root"
+      path: "/etc/ssl/<%= ca.name %>/ca.cert"
+      mode: 0444
+      user: { id: 0 }
+      group: { id: 0 }
+      contents:
+        source: "<%= ca.source %>"
+    <% } %>
+    <% keypairs.each { |keypair| %>
+    <% if keypair.has_key?(:name) %>
+    - filesystem: "root"
+      path: "/etc/ssl/<%= keypair[:ca].name %>/<%= keypair[:name] %>/cert"
+      mode: 0444
+      user: { id: 0 }
+      group: { id: 0 }
+      contents:
+        source: "<%= keypair[:source][:cert] %>"
+    - filesystem: "root"
+      path: "/etc/ssl/<%= keypair[:ca].name %>/<%= keypair[:name] %>/key"
+      mode: 0444
+      user: { id: 0 }
+      group: { id: 0 }
+      contents:
+        source: "<%= keypair[:source][:key] %>"
+    <% else %>
+    - filesystem: "root"
+      path: "/etc/ssl/<%= keypair[:ca].name %>/ca.key"
+      mode: 0444
+      user: { id: 0 }
+      group: { id: 0 }
+      contents:
+        source: "<%= keypair[:source][:key] %>"
+    <% end %>
+    <% } %>
     - filesystem: "root"
       path:  '/etc/usersync.env'
       mode:  0644
@@ -68,20 +102,3 @@ storage:
       group: { id: 0 }
       contents: |
         USERSYNC_SSH_GROUP="<%= ssh_group %>"
-
-    - filesystem: "root"
-      path:  '/etc/s3-download.d/certs.conf'
-      mode:  0644
-      user:  { id: 0 }
-      group: { id: 0 }
-      contents: |
-        <% cas.each { |ca| %><%= ca.source %>:/etc/ssl/<%= ca.name %>/ca.cert:0444
-        <% } %>
-        <% keypairs.each do |keypair| %>
-        <% if keypair.has_key?(:name) %>
-        <%= keypair[:source][:cert] %>:/etc/ssl/<%= keypair[:ca].name %>/<%= keypair[:name] %>/cert:0444
-        <%= keypair[:source][:key] %>:/etc/ssl/<%= keypair[:ca].name %>/<%= keypair[:name] %>/key:0444
-        <% else %>
-        <%= keypair[:source][:key] %>:/etc/ssl/<%= keypair[:ca].name %>/ca.key:0444
-        <% end %>
-        <% end %>
