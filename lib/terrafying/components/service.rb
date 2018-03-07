@@ -55,7 +55,13 @@ module Terrafying
           subnets: vpc.subnets.fetch(:private, []),
           startup_grace_period: 300,
           depends_on: [],
+          audit_role: "arn:aws:iam::#{aws.account_id}:role/auditd_logging"
         }.merge(options)
+
+        unless options[:audit_role].nil?
+          fluentd_conf = Auditd.fluentd_conf(options[:audit_role])
+          options = options.merge({ files: options[:files] | fluentd_conf[:files] })
+        end
 
         if ! options.has_key? :user_data
           options[:user_data] = Ignition.generate(options)
