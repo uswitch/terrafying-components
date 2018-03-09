@@ -2,12 +2,14 @@
 require 'digest'
 require 'terrafying/generator'
 require 'terrafying/util'
+require 'terrafying/components/auditd'
 require 'terrafying/components/dynamicset'
 require 'terrafying/components/endpointservice'
 require 'terrafying/components/ignition'
 require 'terrafying/components/instance'
 require 'terrafying/components/instanceprofile'
 require 'terrafying/components/loadbalancer'
+require 'terrafying/components/selfsignedca'
 require 'terrafying/components/staticset'
 require 'terrafying/components/usable'
 
@@ -55,7 +57,15 @@ module Terrafying
           subnets: vpc.subnets.fetch(:private, []),
           startup_grace_period: 300,
           depends_on: [],
+          audit: {
+            role: "arn:aws:iam::#{aws.account_id}:role/auditd_logging"
+          }
         }.merge(options)
+
+        unless options[:audit].nil? || options[:audit][:role].nil?
+          fluentd_conf = Auditd.fluentd_conf(options[:audit])
+          options = options.merge({ files: options[:files] | fluentd_conf[:files] })
+        end
 
         if ! options.has_key? :user_data
           options[:user_data] = Ignition.generate(options)
