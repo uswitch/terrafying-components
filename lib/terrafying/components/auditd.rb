@@ -3,7 +3,25 @@
 module Terrafying
   module Components
     class Auditd
-      DEFAULT_TAGS =
+      def self.fluentd_conf(options)
+        new.fluentd_conf(options)
+      end
+
+      def fluentd_conf(options)
+        options = {
+          tags: default_tags
+        }.deep_merge(options)
+
+        {
+          files: [
+            systemd_input,
+            ec2_filter(options[:tags]),
+            s3_output(options[:role])
+          ]
+        }
+      end
+
+      def default_tags
         {
           name:          'tagset_name',
           instance_id:   'instance_id',
@@ -13,23 +31,6 @@ module Terrafying
           vpc_id:        'vpc_id',
           ami_id:        'image_id',
           account_id:    'account_id'
-        }.freeze
-
-      def self.fluentd_conf(options)
-        new.fluentd_conf(options)
-      end
-
-      def fluentd_conf(options)
-        options = {
-          tags: DEFAULT_TAGS
-        }.deep_merge(options)
-
-        {
-          files: [
-            systemd_input,
-            ec2_filter(options[:tags]),
-            s3_output(options[:role])
-          ]
         }
       end
 
