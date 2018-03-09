@@ -175,12 +175,14 @@ RSpec.describe Terrafying::Components::Ignition, '#generate' do
 
       files = JSON.parse(user_data, { symbolize_names: true })[:storage][:files]
 
-      conf_file = files.find { |f| f[:path] == '/etc/s3-download.d/certs.conf' }
-      conf_content = Base64.decode64(conf_file[:contents][:source].sub(/^[^,]*,/, ''))
+      ca_crt = files.find { |f| f[:path] == '/etc/ssl/great-ca/ca.cert' }
+      pair_key = files.find { |f| f[:path] == '/etc/ssl/great-ca/foo/key' }
+      pair_crt = files.find { |f| f[:path] == '/etc/ssl/great-ca/foo/cert' }
 
-      paths = conf_content.scan(%r{/etc/ssl/[^/]+/[a-z\.]+[/\.][a-z\.]+})
+      expect(ca_crt[:contents][:source]).to eq('s3://some-bucket/great-ca/ca.cert')
+      expect(pair_key[:contents][:source]).to eq('s3://some-bucket/great-ca/foo/key')
+      expect(pair_crt[:contents][:source]).to eq('s3://some-bucket/great-ca/foo/cert')
 
-      expect(paths).to include('/etc/ssl/great-ca/ca.cert', '/etc/ssl/great-ca/foo/key', '/etc/ssl/great-ca/foo/cert')
     end
 
     it 'handles ca keypairs' do
@@ -194,12 +196,11 @@ RSpec.describe Terrafying::Components::Ignition, '#generate' do
 
       files = JSON.parse(user_data, { symbolize_names: true })[:storage][:files]
 
-      conf_file = files.find { |f| f[:path] == '/etc/s3-download.d/certs.conf' }
-      conf_content = Base64.decode64(conf_file[:contents][:source].sub(/^[^,]*,/, ''))
+      key = files.find { |f| f[:path] == '/etc/ssl/great-ca/ca.key' }
+      crt = files.find { |f| f[:path] == '/etc/ssl/great-ca/ca.cert' }
 
-      paths = conf_content.scan(%r{/etc/ssl/[^/]+/[a-z\.]+[/\.][a-z\.]+})
-
-      expect(paths).to include('/etc/ssl/great-ca/ca.cert', '/etc/ssl/great-ca/ca.key')
+      expect(key[:contents][:source]).to eq('s3://some-bucket/great-ca/ca.key')
+      expect(crt[:contents][:source]).to eq('s3://some-bucket/great-ca/ca.cert')
     end
 
     it 'shouldnt duplicate the ca.cert' do
@@ -213,31 +214,8 @@ RSpec.describe Terrafying::Components::Ignition, '#generate' do
 
       files = JSON.parse(user_data, { symbolize_names: true })[:storage][:files]
 
-      conf_file = files.find { |f| f[:path] == '/etc/s3-download.d/certs.conf' }
-      conf_content = Base64.decode64(conf_file[:contents][:source].sub(/^[^,]*,/, ''))
-
-      paths = conf_content.scan(%r{/etc/ssl/[^/]+/[a-z\.]+[/\.][a-z\.]+})
-
-      expect(paths.select {|path| path.end_with?("ca.cert") }.count).to eq(1)
+      expect(files.select { |file| file[:path].end_with? 'ca.cert' }.count).to eq(1)
     end
-
-    it 'shouldnt have multiple entries in a line' do
-      ca = Terrafying::Components::SelfSignedCA.create('great-ca', 'some-bucket')
-      ca2 = Terrafying::Components::SelfSignedCA.create('another-great-ca', 'some-bucket')
-
-      user_data = Terrafying::Components::Ignition.generate({keypairs: [ca.keypair, ca2.keypair]})
-
-      files = JSON.parse(user_data, { symbolize_names: true })[:storage][:files]
-
-      conf_file = files.find { |f| f[:path] == '/etc/s3-download.d/certs.conf' }
-      conf_content = Base64.decode64(conf_file[:contents][:source].sub(/^[^,]*,/, ''))
-
-      lines = conf_content.split("\n")
-      lines_with_multiple_statements = lines.select { |l| l.split("/etc/ssl").count > 2 }
-
-      expect(lines_with_multiple_statements.count).to eq(0)
-    end
-
   end
 
   context "validation" do
