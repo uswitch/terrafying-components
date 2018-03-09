@@ -51,7 +51,7 @@ RSpec.describe Terrafying::Components::Service do
     expect(output['resource']['aws_instance'].values.first[:user_data]).to include('/etc/fluentd/conf.d')
   end
 
-  it 'should add fluentd config for auditd logs to user data with the audit role specified' do
+  it 'should add fluentd config for auditd logs to user data with the default audit role' do
     unit = Terrafying::Components::Ignition.container_unit('app', 'app:latest')
     service = Terrafying::Components::Service.create_in(
       @vpc, 'foo', {
@@ -66,6 +66,26 @@ RSpec.describe Terrafying::Components::Service do
     conf_content = Base64.decode64(conf_file[:contents][:source].sub(/^[^,]*,/, ''))
 
     expect(conf_content).to include('role_arn arn:aws:iam::1234:role/auditd_logging')
+  end
+
+  it 'should add fluentd config for auditd logs to user data with the audit role specified' do
+    unit = Terrafying::Components::Ignition.container_unit('app', 'app:latest')
+    service = Terrafying::Components::Service.create_in(
+      @vpc, 'foo', {
+        units: [unit],
+        audit: {
+          role: 'an-audit-role'
+        }
+      }
+    )
+
+    user_data = service.output_with_children['resource']['aws_instance'].values.first[:user_data]
+    files = JSON.parse(user_data, { symbolize_names: true })[:storage][:files]
+
+    conf_file = files.find { |f| f[:path] == '/etc/fluentd/conf.d/30_auditd_output_s3.conf' }
+    conf_content = Base64.decode64(conf_file[:contents][:source].sub(/^[^,]*,/, ''))
+
+    expect(conf_content).to include('role_arn an-audit-role')
   end
 
   it "should depend on any key pairs passed in" do

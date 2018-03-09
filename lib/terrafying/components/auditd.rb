@@ -3,13 +3,33 @@
 module Terrafying
   module Components
     class Auditd
-      def self.fluentd_conf(audit_role)
-        new.fluentd_conf(audit_role)
+      DEFAULT_TAGS =
+        {
+          name:          'tagset_name',
+          instance_id:   'instance_id',
+          instance_type: 'instance_type',
+          private_ip:    'private_ip',
+          az:            'availability_zone',
+          vpc_id:        'vpc_id',
+          ami_id:        'image_id',
+          account_id:    'account_id'
+        }.freeze
+
+      def self.fluentd_conf(options)
+        new.fluentd_conf(options)
       end
 
-      def fluentd_conf(audit_role)
+      def fluentd_conf(options)
+        options = {
+          tags: DEFAULT_TAGS
+        }.deep_merge(options)
+
         {
-          files: [systemd_input, ec2_filter, s3_output(audit_role)]
+          files: [
+            systemd_input,
+            ec2_filter(options[:tags]),
+            s3_output(options[:role])
+          ]
         }
       end
 
@@ -53,26 +73,24 @@ module Terrafying
         )
       end
 
-      def ec2_filter
+      def ec2_filter(tags)
         file_of(
           '20_auditd_filter_ec2',
-          <<~'EC2_FILTER'
+          <<~EC2_FILTER
             <filter auditd>
               @type ec2_metadata
               metadata_refresh_seconds 300
               <record>
-                name               ${tagset_name}
-                instance_id        ${instance_id}
-                instance_type      ${instance_type}
-                private_ip         ${private_ip}
-                az                 ${availability_zone}
-                vpc_id             ${vpc_id}
-                ami_id             ${image_id}
-                account_id         ${account_id}
+                #{map_tags(tags)}
               </record>
             </filter>
           EC2_FILTER
         )
+      end
+
+      def map_tags(tags)
+        tags.map { |k, v| "#{k} ${#{v}}" }
+            .reduce { |out, e| +out << "\n    #{e}" }
       end
 
       def s3_output(audit_role)
