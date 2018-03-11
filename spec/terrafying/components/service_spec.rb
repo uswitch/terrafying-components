@@ -73,9 +73,7 @@ RSpec.describe Terrafying::Components::Service do
     service = Terrafying::Components::Service.create_in(
       @vpc, 'foo', {
         units: [unit],
-        audit: {
-          role: 'an-audit-role'
-        }
+        audit_role: 'an-audit-role'
       }
     )
 

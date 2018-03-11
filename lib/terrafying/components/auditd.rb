@@ -3,22 +3,31 @@
 module Terrafying
   module Components
     class Auditd
-      def self.fluentd_conf(options)
-        new.fluentd_conf(options)
+      def self.fluentd_conf(role, tags = [])
+        new.fluentd_conf(role, tags)
       end
 
-      def fluentd_conf(options)
-        options = {
-          tags: default_tags
-        }.deep_merge(options)
+      def fluentd_conf(role, tags)
+        tags = default_tags.merge(
+          custom_tags(tags)
+        )
 
         {
           files: [
             systemd_input,
-            ec2_filter(options[:tags]),
-            s3_output(options[:role])
+            ec2_filter(tags),
+            s3_output(role)
           ]
         }
+      end
+
+      def custom_tags(tags)
+        tags.map { |t| [t, wrap_tag(t)] }.to_h
+      end
+
+      def wrap_tag(t)
+        t = "tagset_#{t}" unless t.start_with? 'tagset_'
+        t.downcase
       end
 
       def default_tags
