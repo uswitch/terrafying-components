@@ -50,8 +50,8 @@ module Terrafying
       def allow_describe_instances
         {
           Effect: 'Allow',
-          Actions: %w[ec2:DescribeInstances ec2:DescribeTags ec2:DescribeRouteTables],
-          Resource: '*'
+          Action: %w[ec2:DescribeInstances ec2:DescribeTags ec2:DescribeRouteTables],
+          Resource: ['*']
         }
       end
 
