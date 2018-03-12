@@ -1,5 +1,6 @@
 
 require 'digest'
+require 'hash/merge_with_arrays'
 require 'terrafying/generator'
 require 'terrafying/util'
 require 'terrafying/components/auditd'
@@ -62,7 +63,7 @@ module Terrafying
 
         unless options[:audit_role].nil?
           fluentd_conf = Auditd.fluentd_conf(options[:audit_role], options[:tags].keys)
-          options = options.deep_merge(fluentd_conf)
+          options = options.merge_with_arrays_merged(fluentd_conf)
         end
 
         if ! options.has_key? :user_data

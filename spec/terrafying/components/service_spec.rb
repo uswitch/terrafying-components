@@ -109,6 +109,29 @@ RSpec.describe Terrafying::Components::Service do
     )
   end
 
+  context('iam policy') do
+    it 'should add specified iam policy statements to the instance' do
+      specified_policy = {
+        Effect: 'Allow',
+        Action: ['s3:*'],
+        Resource: ['all-the-buckets']
+      }
+
+      unit = Terrafying::Components::Ignition.container_unit('app', 'app:latest')
+      service = Terrafying::Components::Service.create_in(
+        @vpc, 'foo', {
+          units: [unit],
+          iam_policy_statements: [specified_policy]
+        }
+      )
+
+      policy_json = service.output_with_children['resource']['aws_iam_role_policy']['a-vpc-foo'][:policy]
+      policy = JSON.parse(policy_json, symbolize_names: true)
+
+      expect(policy[:Statement]).to include(a_hash_including(specified_policy))
+    end
+  end
+
 
   it "should depend on any key pairs passed in" do
     ca = Terrafying::Components::SelfSignedCA.create("ca", "some-bucket")
