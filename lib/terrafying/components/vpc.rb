@@ -196,6 +196,33 @@ module Terrafying
         self
       end
 
+      def peer_with_external(account_id, vpc_id, cidrs, options={})
+        options = {
+          region: "eu-west-1",
+          subnets: @subnets.values.flatten,
+        }.merge(options)
+
+        peering_connection = resource :aws_vpc_peering_connection, "#{@name}-to-#{account_id}-#{vpc_id}", {
+                                        peer_owner_id: account_id,
+                                        peer_vpc_id: vpc_id,
+                                        peer_region: options[:region],
+                                        vpc_id: @id,
+                                        auto_accept: false,
+                                        tags: { Name: "#{@name} to #{account_id}.#{vpc_id}" }.merge(@tags),
+                                      }
+
+        our_route_tables = options[:subnets].map(&:route_table).sort.uniq
+
+        our_route_tables.product(cidrs).each { |route_table, cidr|
+          hash = Digest::SHA2.hexdigest "#{route_table}-#{tf_safe(cidr)}"
+
+          resource :aws_route, "#{@name}-to-#{account_id}-#{vpc_id}-peer-#{hash}", {
+                     route_table_id: route_table,
+                     destination_cidr_block: cidr,
+                     vpc_peering_connection_id: peering_connection,
+                   }
+        }
+      end
 
       def peer_with(other_vpc, options={})
         options = {
