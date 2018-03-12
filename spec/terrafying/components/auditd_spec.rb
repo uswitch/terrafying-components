@@ -117,5 +117,47 @@ RSpec.describe Terrafying::Components::Auditd, '#fluentd_conf' do
         )
       )
     end
+
+    it('should allow the instance to describe instances') do
+      conf = Terrafying::Components::Auditd.fluentd_conf('a-role', ['my_tag'])
+
+      expect(conf[:iam_policy_statements]).to include(
+        a_hash_including(
+          {
+            Effect: 'Allow',
+            Action:  a_collection_including('ec2:DescribeInstances'),
+            Resource: ['*']
+          }
+        )
+      )
+    end
+
+    it('should allow the instance to describe tags') do
+      conf = Terrafying::Components::Auditd.fluentd_conf('a-role', ['my_tag'])
+
+      expect(conf[:iam_policy_statements]).to include(
+        a_hash_including(
+          {
+            Effect: 'Allow',
+            Action:  a_collection_including('ec2:DescribeTags'),
+            Resource: ['*']
+          }
+        )
+      )
+    end
+
+    it('should allow the instance to describe routes') do
+      conf = Terrafying::Components::Auditd.fluentd_conf('a-role', ['my_tag'])
+
+      expect(conf[:iam_policy_statements]).to include(
+        a_hash_including(
+          {
+            Effect: 'Allow',
+            Action:  a_collection_including('ec2:DescribeRouteTables'),
+            Resource: ['*']
+          }
+        )
+      )
+    end
   end
 end
