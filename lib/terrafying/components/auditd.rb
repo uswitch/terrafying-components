@@ -19,6 +19,7 @@ module Terrafying
             s3_output(role)
           ],
           iam_policy_statements: [
+            allow_describe_instances,
             allow_assume(role)
           ]
         }
@@ -43,6 +44,14 @@ module Terrafying
           vpc_id:        'vpc_id',
           ami_id:        'image_id',
           account_id:    'account_id'
+        }
+      end
+
+      def allow_describe_instances
+        {
+          Effect: 'Allow',
+          Actions: %w[ec2:DescribeInstances ec2:DescribeTags ec2:DescribeRouteTables],
+          Resource: '*'
         }
       end
 
