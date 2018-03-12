@@ -57,14 +57,12 @@ module Terrafying
           subnets: vpc.subnets.fetch(:private, []),
           startup_grace_period: 300,
           depends_on: [],
-          audit: {
-            role: "arn:aws:iam::#{aws.account_id}:role/auditd_logging"
-          }
+          audit_role: "arn:aws:iam::#{aws.account_id}:role/auditd_logging"
         }.merge(options)
 
-        unless options[:audit].nil? || options[:audit][:role].nil?
-          fluentd_conf = Auditd.fluentd_conf(options[:audit])
-          options = options.merge({ files: options[:files] | fluentd_conf[:files] })
+        unless options[:audit_role].nil?
+          fluentd_conf = Auditd.fluentd_conf(options[:audit_role], options[:tags].keys)
+          options = options.deep_merge(fluentd_conf)
         end
 
         if ! options.has_key? :user_data
