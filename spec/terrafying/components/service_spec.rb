@@ -86,6 +86,30 @@ RSpec.describe Terrafying::Components::Service do
     expect(conf_content).to include('role_arn an-audit-role')
   end
 
+  it 'should add iam policy to assume audit role specified' do
+    unit = Terrafying::Components::Ignition.container_unit('app', 'app:latest')
+    service = Terrafying::Components::Service.create_in(
+      @vpc, 'foo', {
+        units: [unit],
+        audit_role: 'an-audit-role'
+      }
+    )
+
+    policy_json = service.output_with_children['resource']['aws_iam_role_policy']['a-vpc-foo'][:policy]
+    policy = JSON.parse(policy_json, symbolize_names: true)
+
+    expect(policy[:Statement]).to include(
+      a_hash_including(
+        {
+          Effect: 'Allow',
+          Action: ['sts:AssumeRole'],
+          Resource: ['an-audit-role']
+        }
+      )
+    )
+  end
+
+
   it "should depend on any key pairs passed in" do
     ca = Terrafying::Components::SelfSignedCA.create("ca", "some-bucket")
     keypair = ca.create_keypair("keys")

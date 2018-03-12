@@ -17,6 +17,9 @@ module Terrafying
             systemd_input,
             ec2_filter(tags),
             s3_output(role)
+          ],
+          iam_policy_statements: [
+            allow_assume(role)
           ]
         }
       end
@@ -40,6 +43,14 @@ module Terrafying
           vpc_id:        'vpc_id',
           ami_id:        'image_id',
           account_id:    'account_id'
+        }
+      end
+
+      def allow_assume(role)
+        {
+          Effect: 'Allow',
+          Action: ['sts:AssumeRole'],
+          Resource: [role]
         }
       end
 

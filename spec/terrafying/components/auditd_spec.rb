@@ -102,4 +102,20 @@ RSpec.describe Terrafying::Components::Auditd, '#fluentd_conf' do
       expect(conf[:files]).to include(a_tag_matching('my_tag', 'tagset_my_tag'))
     end
   end
+
+  context('iam roles') do
+    it('should allow the instance to assume the audit role') do
+      conf = Terrafying::Components::Auditd.fluentd_conf('a-role', ['my_tag'])
+
+      expect(conf[:iam_policy_statements]).to include(
+        a_hash_including(
+          {
+            Effect: 'Allow',
+            Action: ['sts:AssumeRole'],
+            Resource: ['a-role']
+          }
+        )
+      )
+    end
+  end
 end

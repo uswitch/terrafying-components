@@ -62,7 +62,7 @@ module Terrafying
 
         unless options[:audit_role].nil?
           fluentd_conf = Auditd.fluentd_conf(options[:audit_role], options[:tags].keys)
-          options = options.merge({ files: options[:files] | fluentd_conf[:files] })
+          options = options.deep_merge(fluentd_conf)
         end
 
         if ! options.has_key? :user_data
