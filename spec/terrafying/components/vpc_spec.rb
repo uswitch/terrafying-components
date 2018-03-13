@@ -100,6 +100,44 @@ RSpec.describe Terrafying::Components::VPC do
     expect(ssh_security_group[:egress][0]).to eq(rule)
   end
 
+  context "peer_with_vpn" do
+
+    it "should blow up with more than two tunnels" do
+      vpc = Terrafying::Components::VPC.create("foo", "10.0.0.0/16")
+
+      expect {
+        vpc.peer_with_vpn("1.2.3.4", ["10.1.0.0/16"], { tunnels: [ {}, {}, {} ] })
+      }.to raise_error RuntimeError
+    end
+
+    it "sets tunnel stuff properly" do
+      vpc = Terrafying::Components::VPC.create("foo", "10.0.0.0/16")
+
+      vpc.peer_with_vpn(
+        "1.2.3.4", ["10.1.0.0/16"],
+        {
+          tunnels: [
+            {
+              cidr: "1.2.3.4/30",
+            },
+            {
+              cidr: "2.3.4.5/30",
+              key: "asdf",
+            }
+          ]
+        }
+      )
+
+      conn = vpc.output_with_children["resource"]["aws_vpn_connection"]["1-2-3-4"]
+
+      expect(conn["tunnel1_inside_cidr"]).to eq("1.2.3.4/30")
+      expect(conn).to_not have_key("tunnel1_preshared_key")
+      expect(conn["tunnel2_inside_cidr"]).to eq("2.3.4.5/30")
+      expect(conn["tunnel2_preshared_key"]).to eq("asdf")
+    end
+
+  end
+
   context "peer_with" do
 
     it "should raise an error if the cidrs are overlapping" do

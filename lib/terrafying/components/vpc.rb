@@ -31,7 +31,6 @@ module Terrafying
       def find(name)
         vpc = aws.vpc(name)
 
-
         @name = name
         @id = vpc.vpc_id
         @cidr = vpc.cidr_block
@@ -222,6 +221,70 @@ module Terrafying
                      vpc_peering_connection_id: peering_connection,
                    }
         }
+      end
+
+      def peer_with_vpn(ip_address, cidrs, options={})
+        options = {
+          bgp_asn: 65000,
+          type: "ipsec.1",
+          tunnels: [],
+          static_routes_only: true,
+          subnets: @subnets.values.flatten,
+        }.merge(options)
+
+        ident = tf_safe(ip_address)
+
+        if options[:tunnels].count > 2
+          raise "You can only define a max of two tunnels"
+        end
+
+        customer_gateway = resource :aws_customer_gateway, ident, {
+                                      bgp_asn: options[:bgp_asn],
+                                      ip_address: ip_address,
+                                      type: options[:type],
+                                      tags: {
+                                        Name: "Connection to #{ip_address}"
+                                      }.merge(@tags),
+                                    }
+
+        vpn_gateway = resource :aws_vpn_gateway, ident, {
+                                 vpc_id: @id,
+                                 tags: {
+                                   Name: "Connection to #{ip_address}"
+                                 }.merge(@tags),
+                               }
+
+        connection_config = {
+          vpn_gateway_id: vpn_gateway,
+          customer_gateway_id: customer_gateway,
+          type: options[:type],
+          static_routes_only: options[:static_routes_only],
+          tags: {
+            Name: "Connection to #{ip_address}"
+          }.merge(@tags),
+        }
+
+        options[:tunnels].each.with_index { |tunnel, i|
+          connection_config["tunnel#{i+1}_inside_cidr"] = tunnel[:cidr]
+
+          if tunnel.has_key?(:key)
+            connection_config["tunnel#{i+1}_preshared_key"] = tunnel[:key]
+          end
+        }
+
+        resource :aws_vpn_connection, ident, connection_config
+
+        route_tables = options[:subnets].map(&:route_table).sort.uniq
+        route_tables.product(cidrs).each { |route_table, cidr|
+          hash = Digest::SHA2.hexdigest "#{route_table}-#{tf_safe(cidr)}"
+
+          resource :aws_route, "#{@name}-to-#{ident}-peer-#{hash}", {
+                     route_table_id: route_table,
+                     destination_cidr_block: cidr,
+                     gateway_id: vpn_gateway,
+                   }
+        }
+
       end
 
       def peer_with(other_vpc, options={})
