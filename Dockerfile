@@ -13,10 +13,6 @@ RUN wget -O terraform.zip https://releases.hashicorp.com/terraform/0.11.3/terraf
  && install -d ${HOME}/.terraform.d/plugins/linux_amd64 \
  && rm terraform terraform.zip
 
-RUN wget -O terraform-provider-aws https://github.com/uswitch/terraform-provider-aws/releases/download/private-link/terraform-provider-aws \
- && install -m 755 terraform-provider-aws /root/.terraform.d/plugins/linux_amd64/terraform-provider-aws_v1.7.0 \
- && rm terraform-provider-aws
-
 RUN wget -O terraform-provider-acme.zip https://github.com/paybyphone/terraform-provider-acme/releases/download/v0.4.0/terraform-provider-acme_v0.4.0_linux_amd64.zip \
  && unzip terraform-provider-acme.zip \
  && install -m 755 terraform-provider-acme /root/.terraform.d/plugins/linux_amd64/terraform-provider-acme_v0.4.0 \
