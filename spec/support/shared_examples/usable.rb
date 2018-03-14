@@ -21,6 +21,20 @@ shared_examples "a usable resource" do
     )
   end
 
+  it "should allow path MTU ICMP messages back on egress" do
+    egress_id = @main_resource.egress_security_group.to_s.split('.')[1]
+    egress = @main_resource.output_with_children["resource"]["aws_security_group"][egress_id]
+
+    expect(
+      egress.fetch(:ingress, []).any? { |ingress|
+        ingress[:protocol] == 1 &&
+          ingress[:from_port] == 3 &&
+          ingress[:to_port] == 4 &&
+          ingress[:cidr_blocks].include?("0.0.0.0/0")
+      }
+    ).to be true
+  end
+
   it "should add ingress that maps the right cidrs" do
     cidrs = ["10.1.0.0/16", "10.2.0.0/16"]
     @main_resource.used_by_cidr(*cidrs)
