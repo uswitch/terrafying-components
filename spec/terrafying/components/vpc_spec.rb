@@ -136,6 +136,23 @@ RSpec.describe Terrafying::Components::VPC do
       expect(conn["tunnel2_preshared_key"]).to eq("asdf")
     end
 
+    it "create routes as expected" do
+      vpc = Terrafying::Components::VPC.create("foo", "10.0.0.0/16")
+      cidrs = ["10.1.0.0/16", "10.2.0.0/16"]
+
+      vpc.peer_with_vpn("1.2.3.4", cidrs)
+
+      vpn_routes = vpc.output_with_children["resource"]["aws_vpn_connection_route"].values
+      subnet_routes = vpc.output_with_children["resource"]["aws_route"].values
+
+      vpn_routed_cidrs = vpn_routes.map { |r| r[:destination_cidr_block] }.sort.uniq
+      subnet_routed_cidrs = subnet_routes.map { |r| r[:destination_cidr_block] }.sort.uniq
+
+      expect(vpn_routed_cidrs).to include(*cidrs)
+      expect(vpn_routed_cidrs.count).to eq(cidrs.count)
+      expect(subnet_routed_cidrs).to include(*cidrs)
+    end
+
   end
 
   context "peer_with" do

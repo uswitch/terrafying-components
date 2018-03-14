@@ -272,7 +272,14 @@ module Terrafying
           end
         }
 
-        resource :aws_vpn_connection, ident, connection_config
+        connection = resource :aws_vpn_connection, ident, connection_config
+
+        cidrs.each { |cidr|
+          resource :aws_vpn_connection_route, "#{ident}-#{tf_safe(cidr)}", {
+                     destination_cidr_block: cidr,
+                     vpn_connection_id: connection,
+                   }
+        }
 
         route_tables = options[:subnets].map(&:route_table).sort.uniq
         route_tables.product(cidrs).each { |route_table, cidr|
