@@ -44,6 +44,7 @@ module Terrafying
           cidr: "10.8.0.0/24",
           public: true,
           subnets: vpc.subnets.fetch(:public, []),
+          static: false,
           route_all_traffic: false,
           units: [],
           tags: {}
@@ -87,6 +88,13 @@ module Terrafying
           keypairs.push(options[:ca].create_keypair_in(self, @fqdn))
         end
 
+        if options[:static]
+          subnet = options[:subnets].first
+          instances = [{ subnet: subnet, ip_address: subnet.ip_addresses.first }]
+        else
+          instances = [{}]
+        end
+
         @service = add! Service.create_in(
                           vpc, name,
                           {
@@ -97,6 +105,7 @@ module Terrafying
                             files: files,
                             keypairs: keypairs,
                             subnets: options[:subnets],
+                            instances: instances,
                             iam_policy_statements: [
                               {
                                 Effect: "Allow",
