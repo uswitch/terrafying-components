@@ -49,10 +49,12 @@ RSpec.describe Terrafying::Components::StaticSet do
       @vpc, "foo", { ports: ports }
     )
 
-    output = set.output_with_children
+    rules = set.output_with_children["resource"]["aws_security_group_rule"].values
 
-    expect(output["resource"]["aws_security_group_rule"].count).to eq(ports.count)
-    expect(output["resource"]["aws_security_group_rule"].values.all? {|r| r[:self]}).to be true
+    port_rules = rules.select { |rule| ports.include?(rule[:from_port]) }
+
+    expect(port_rules.count).to eq(ports.count)
+    expect(port_rules.all? {|r| r[:self]}).to be true
   end
 
 end

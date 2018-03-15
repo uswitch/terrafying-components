@@ -63,14 +63,6 @@ module Terrafying
                                      description: "Describe the ingress and egress of the static set #{ident}",
                                      tags: options[:tags],
                                      vpc_id: vpc.id,
-                                     ingress: [
-                                       {
-                                         protocol: 1,
-                                         from_port: 3,
-                                         to_port: 4,
-                                         cidr_blocks: ["0.0.0.0/0"],
-                                       }
-                                     ],
                                      egress: [
                                        {
                                          from_port: 0,
@@ -81,6 +73,7 @@ module Terrafying
                                      ],
                                    }
 
+        path_mtu_setup!
 
         @instances = options[:instances].map.with_index {|config, i|
           instance_ident = "#{name}-#{i}"

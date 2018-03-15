@@ -17,6 +17,17 @@ module Terrafying
         @egress_security_group || @security_group
       end
 
+      def path_mtu_setup!
+        resource :aws_security_group_rule, "#{@name}-path-mtu", {
+                     security_group_id: self.egress_security_group,
+                     type: "ingress",
+                     protocol: 1, # icmp
+                     from_port: 3, # icmp type
+                     to_port: 4, # icmp code
+                     cidr_blocks: ["0.0.0.0/0"],
+                   }
+      end
+
       def pingable_by_cidr(*cidrs)
         ident = Digest::SHA2.hexdigest cidrs.to_s
 

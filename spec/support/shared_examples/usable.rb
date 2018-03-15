@@ -22,15 +22,16 @@ shared_examples "a usable resource" do
   end
 
   it "should allow path MTU ICMP messages back on egress" do
-    egress_id = @main_resource.egress_security_group.to_s.split('.')[1]
-    egress = @main_resource.output_with_children["resource"]["aws_security_group"][egress_id]
+    security_group_rules = @main_resource.output_with_children["resource"].fetch("aws_security_group_rule", {}).values
 
     expect(
-      egress.fetch(:ingress, []).any? { |ingress|
-        ingress[:protocol] == 1 &&
-          ingress[:from_port] == 3 &&
-          ingress[:to_port] == 4 &&
-          ingress[:cidr_blocks].include?("0.0.0.0/0")
+      security_group_rules.any? { |rule|
+        rule[:type] == "ingress" &&
+          rule[:security_group_id] == @main_resource.egress_security_group &&
+          rule[:protocol] == 1 &&
+          rule[:from_port] == 3 &&
+          rule[:to_port] == 4 &&
+          rule[:cidr_blocks].include?("0.0.0.0/0")
       }
     ).to be true
   end
