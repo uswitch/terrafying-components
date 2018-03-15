@@ -2,6 +2,8 @@ shared_examples "a usable resource" do
 
   it { is_expected.to respond_to(:used_by) }
   it { is_expected.to respond_to(:used_by_cidr) }
+  it { is_expected.to respond_to(:pingable_by) }
+  it { is_expected.to respond_to(:pingable_by_cidr) }
 
   let :ports do
     [
@@ -17,6 +19,20 @@ shared_examples "a usable resource" do
         ports: ports,
       },
     )
+  end
+
+  it "should allow path MTU ICMP messages back on egress" do
+    egress_id = @main_resource.egress_security_group.to_s.split('.')[1]
+    egress = @main_resource.output_with_children["resource"]["aws_security_group"][egress_id]
+
+    expect(
+      egress.fetch(:ingress, []).any? { |ingress|
+        ingress[:protocol] == 1 &&
+          ingress[:from_port] == 3 &&
+          ingress[:to_port] == 4 &&
+          ingress[:cidr_blocks].include?("0.0.0.0/0")
+      }
+    ).to be true
   end
 
   it "should add ingress that maps the right cidrs" do
@@ -42,6 +58,37 @@ shared_examples "a usable resource" do
 
   end
 
+  it "should add icmp that maps the right cidrs" do
+    cidrs = ["10.1.0.0/16", "10.2.0.0/16"]
+    @main_resource.pingable_by_cidr(*cidrs)
+
+    output = @main_resource.output_with_children
+
+    expect(output["resource"]["aws_security_group_rule"].count).to be >= 2
+
+    expect(
+      output["resource"]["aws_security_group_rule"].any? { |_, rule|
+        rule[:type] == "ingress" && \
+        rule.has_key?(:cidr_blocks) && \
+        rule[:cidr_blocks] == cidrs && \
+        rule[:from_port] == 8 && \
+        rule[:to_port] == 0 && \
+        rule[:protocol] == 1
+      }
+    ).to be true
+
+    expect(
+      output["resource"]["aws_security_group_rule"].any? { |_, rule|
+        rule[:type] == "ingress" && \
+        rule.has_key?(:cidr_blocks) && \
+        rule[:cidr_blocks] == cidrs && \
+        rule[:from_port] == 128 && \
+        rule[:to_port] == 0 && \
+        rule[:protocol] == 58
+      }
+    ).to be true
+  end
+
   it "should add ingress that maps the right resources" do
     other_resource = Terrafying::Components::Instance.create_in(@vpc, "some-thing-else")
     another_resource = Terrafying::Components::Instance.create_in(@vpc, "another-thing")
@@ -64,6 +111,60 @@ shared_examples "a usable resource" do
           rule[:to_port] == port[:number] && \
           rule[:protocol] == "tcp"
         }
+      }
+    ).to be true
+  end
+
+  it "should add icmp that maps the right resources" do
+    other_resource = Terrafying::Components::Instance.create_in(@vpc, "some-thing-else")
+
+    @main_resource.pingable_by(other_resource)
+
+    output = @main_resource.output_with_children
+
+    expect(output["resource"]["aws_security_group_rule"].count).to be >= 4
+
+    expect(
+      output["resource"]["aws_security_group_rule"].any? { |_, rule|
+        rule[:type] == "ingress" && \
+        rule.has_key?(:source_security_group_id) && \
+        rule[:source_security_group_id] == other_resource.egress_security_group && \
+        rule[:from_port] == 8 && \
+        rule[:to_port] == 0 && \
+        rule[:protocol] == 1
+      }
+    ).to be true
+
+    expect(
+      output["resource"]["aws_security_group_rule"].any? { |_, rule|
+        rule[:type] == "ingress" && \
+        rule.has_key?(:source_security_group_id) && \
+        rule[:source_security_group_id] == other_resource.egress_security_group && \
+        rule[:from_port] == 128 && \
+        rule[:to_port] == 0 && \
+        rule[:protocol] == 58
+      }
+    ).to be true
+
+    expect(
+      output["resource"]["aws_security_group_rule"].any? { |_, rule|
+        rule[:type] == "egress" && \
+        rule.has_key?(:source_security_group_id) && \
+        rule[:source_security_group_id] == @main_resource.ingress_security_group && \
+        rule[:from_port] == 8 && \
+        rule[:to_port] == 0 && \
+        rule[:protocol] == 1
+      }
+    ).to be true
+
+    expect(
+      output["resource"]["aws_security_group_rule"].any? { |_, rule|
+        rule[:type] == "egress" && \
+        rule.has_key?(:source_security_group_id) && \
+        rule[:source_security_group_id] == @main_resource.ingress_security_group && \
+        rule[:from_port] == 128 && \
+        rule[:to_port] == 0 && \
+        rule[:protocol] == 58
       }
     ).to be true
   end

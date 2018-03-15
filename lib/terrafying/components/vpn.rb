@@ -308,8 +308,16 @@ EOF
         @service.egress_security_group
       end
 
+      def pingable_by(*services)
+        @service.pingable_by(*services)
+      end
+
       def used_by(*services)
         @service.used_by(*services)
+      end
+
+      def pingable_by_cidr(*cidrs)
+        @service.pingable_by_cidr(*cidrs)
       end
 
       def used_by_cidr(*cidrs)
