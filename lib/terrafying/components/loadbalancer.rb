@@ -88,16 +88,10 @@ module Terrafying
                                            loadbalancer_name: ident,
                                          }
                                        ),
-                                       ingress: [
-                                         {
-                                           protocol: 1,
-                                           from_port: 3,
-                                           to_port: 4,
-                                           cidr_blocks: ["0.0.0.0/0"],
-                                         }
-                                       ],
                                        vpc_id: vpc.id,
                                      }
+
+          path_mtu_setup!
         end
 
         @id = resource :aws_lb, ident, {
