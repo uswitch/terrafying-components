@@ -77,17 +77,6 @@ shared_examples "a usable resource" do
         rule[:protocol] == 1
       }
     ).to be true
-
-    expect(
-      output["resource"]["aws_security_group_rule"].any? { |_, rule|
-        rule[:type] == "ingress" && \
-        rule.has_key?(:cidr_blocks) && \
-        rule[:cidr_blocks] == cidrs && \
-        rule[:from_port] == 128 && \
-        rule[:to_port] == 0 && \
-        rule[:protocol] == 58
-      }
-    ).to be true
   end
 
   it "should add ingress that maps the right resources" do
