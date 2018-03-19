@@ -82,6 +82,7 @@ module Terrafying
           ],
           dns_names: [],
           ip_addresses: [],
+          min_days_remaining: 21,
         }.merge(options)
 
         key_ident = "#{@name}-#{tf_safe(name)}"
@@ -106,6 +107,7 @@ module Terrafying
                        server_url: @server_url,
                        account_key_pem: @account_key,
                        registration_url: @registration_url,
+                       min_days_remaining: options[:min_days_remaining],
                        dns_challenge: {
                          provider: "route53",
                        },
