@@ -39,15 +39,6 @@ module Terrafying
                      to_port: 0, # icmp code
                      cidr_blocks: cidrs,
                    }
-
-        resource :aws_security_group_rule, "#{@name}-to-#{ident}-pingv6", {
-                   security_group_id: self.ingress_security_group,
-                   type: "ingress",
-                   protocol: 58, # icmpv6
-                   from_port: 128, # icmp type
-                   to_port: 0, # icmp code
-                   cidr_blocks: cidrs,
-                 }
       end
 
       def used_by_cidr(*cidrs)
