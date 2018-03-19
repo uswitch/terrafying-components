@@ -10,6 +10,11 @@ module Terrafying
 
       attr_reader :name, :source
 
+      PROVIDERS = {
+        staging: "https://acme-staging.api.letsencrypt.org/directory",
+        live:    "https://acme-v01.api.letsencrypt.org/directory"
+      }.freeze
+
       include CA
 
       def self.create(name, bucket, options={})
@@ -23,14 +28,14 @@ module Terrafying
       def create(name, bucket, options={})
         options = {
           prefix: "",
-          server_url: "https://acme-staging.api.letsencrypt.org/directory",
+          provider: :staging,
           email_address: "cloud@uswitch.com",
         }.merge(options)
 
         @name = name
         @bucket = bucket
         @prefix = options[:prefix]
-        @server_url = options[:server_url]
+        @server_url = PROVIDERS[options[:provider].to_sym]
 
         provider :acme, {}
         provider :tls, {}
