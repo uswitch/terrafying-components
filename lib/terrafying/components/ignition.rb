@@ -84,6 +84,7 @@ EOF
           files: [],
           units: [],
           ssh_group: "cloud",
+          disable_update_engine: false,
           region: Terrafying::Generator.aws.region,
         }.merge(options)
 
