@@ -171,7 +171,7 @@ module Terrafying
         end
 
         Ignition.container_unit(
-          "openvpn-authz", "quay.io/uswitch/openvpn-authz:latest",
+          "openvpn-authz", "quay.io/uswitch/openvpn-authz:stable",
           {
             host_networking: true,
             volumes: [
