@@ -73,6 +73,7 @@ module Terrafying
         files = [
           openvpn_conf,
           openvpn_env,
+          openvpn_ip_delay,
           caddy_conf(options[:ca], has_provider)
         ]
         keypairs = []
@@ -264,6 +265,8 @@ EOF
 server #{cidr_to_split_address(@cidr)}
 verb 3
 
+iproute /etc/openvpn/ovpn_ip.sh
+
 key /etc/ssl/openvpn/server/key
 ca /etc/ssl/openvpn/ca/cert
 cert /etc/ssl/openvpn/server/cert
@@ -298,6 +301,20 @@ EOF
           contents: <<EOF
 declare -x OVPN_SERVER=#{@cidr}
 EOF
+        }
+      end
+
+      # OpenVPN doesn't wait long enough for the tun0 device to init
+      # https://github.com/kylemanna/docker-openvpn/issues/370
+      def openvpn_ip_delay
+        {
+          path: '/etc/openvpn/ovpn_ip.sh',
+          mode: '0755',
+          contents: <<~IP_SCRIPT
+            #!/usr/bin/env bash
+            sleep 0.1
+            /sbin/ip $*
+          IP_SCRIPT
         }
       end
 
