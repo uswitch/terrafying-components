@@ -33,6 +33,28 @@ shared_examples "a CA" do
       expect(@ca.name).to eq(ca_name)
     end
 
+    describe "certificate acl" do
+      it "should be private by default" do
+        ca_cert = @ca.output["resource"]["aws_s3_bucket_object"].values.select { |object|
+          object[:key].end_with?("ca.cert")
+        }
+
+        expect(ca_cert.count).to eq(1)
+        expect(ca_cert[0][:acl]).to eq("private")
+      end
+
+      it "should be public when wanted" do
+        ca = described_class.create(ca_name, bucket_name, public_certificate: true)
+
+        ca_cert = ca.output["resource"]["aws_s3_bucket_object"].values.select { |object|
+          object[:key].end_with?("ca.cert")
+        }
+
+        expect(ca_cert.count).to eq(1)
+        expect(ca_cert[0][:acl]).to eq("public-read")
+      end
+  end
+
   end
 
   describe ".create_keypair_in" do
