@@ -25,6 +25,7 @@ module Terrafying
           prefix: "",
           common_name: name,
           organization: "uSwitch Limited",
+          public_certificate: false,
         }.merge(options)
 
         @name = name
@@ -60,10 +61,17 @@ module Terrafying
         @ca_key = output_of(:tls_private_key, @ident, :private_key_pem)
         @ca_cert = output_of(:tls_self_signed_cert, @ident, :cert_pem)
 
+        if options[:public_certificate]
+          cert_acl = "public-read"
+        else
+          cert_acl = "private"
+        end
+
         resource :aws_s3_bucket_object, "#{@name}-cert", {
                    bucket: @bucket,
                    key: File.join(@prefix, @name, "ca.cert"),
                    content: @ca_cert,
+                   acl: cert_acl,
                  }
 
         self

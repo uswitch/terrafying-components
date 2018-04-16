@@ -30,6 +30,7 @@ module Terrafying
           prefix: "",
           provider: :staging,
           email_address: "cloud@uswitch.com",
+          public_certificate: false,
         }.merge(options)
 
         @name = name
@@ -59,10 +60,17 @@ module Terrafying
                    content: @account_key,
                  }
 
+        if options[:public_certificate]
+          cert_acl = "public-read"
+        else
+          cert_acl = "private"
+        end
+
         resource :aws_s3_bucket_object, "#{@name}-cert", {
                    bucket: @bucket,
                    key: File.join(@prefix, @name, "ca.cert"),
                    content: "we don't care as it's trusted, just want parity",
+                   acl: cert_acl,
                  }
 
         @source = File.join("s3://", @bucket, @prefix, @name, "ca.cert")
