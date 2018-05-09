@@ -1,7 +1,7 @@
+require 'aws-sdk-autoscaling'
 require 'terrafying'
 require 'terrafying/components/dynamicset'
 require 'terrafying/components/instanceprofile'
-
 
 RSpec.describe Terrafying::Components::DynamicSet do
 
