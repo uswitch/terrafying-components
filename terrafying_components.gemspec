@@ -21,7 +21,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rspec', '~> 3.7'
   spec.add_development_dependency 'rspec-mocks', '~> 3.7'
 
-  spec.add_runtime_dependency 'aws-sdk-autoscaling', '~> 1'
   spec.add_runtime_dependency 'netaddr', '~> 1.5'
   spec.add_runtime_dependency 'terrafying', '~> 1'
   spec.add_runtime_dependency 'xxhash', '~> 0.4.0'

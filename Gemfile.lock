@@ -2,7 +2,6 @@ PATH
   remote: .
   specs:
     terrafying_components (1.1.0)
-      aws-sdk-autoscaling (~> 1)
       netaddr (~> 1.5)
       terrafying (~> 1)
       xxhash (~> 0.4.0)
@@ -11,9 +10,6 @@ GEM
   remote: https://rubygems.org/
   specs:
     aws-partitions (1.84.0)
-    aws-sdk-applicationautoscaling (1.8.0)
-      aws-sdk-core (~> 3)
-      aws-sigv4 (~> 1.0)
     aws-sdk-autoscaling (1.5.0)
       aws-sdk-core (~> 3)
       aws-sigv4 (~> 1.0)
@@ -59,8 +55,8 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.7.0)
     rspec-support (3.7.1)
-    terrafying (1.4.0)
-      aws-sdk-applicationautoscaling (~> 1)
+    terrafying (1.4.1)
+      aws-sdk-autoscaling (~> 1)
       aws-sdk-core (~> 3)
       aws-sdk-dynamodb (~> 1)
       aws-sdk-ec2 (~> 1)
