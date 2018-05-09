@@ -49,8 +49,8 @@ module Terrafying
             resource :aws_security_group_rule, "#{@name}-to-#{cidr_ident}-#{port[:name]}", {
                        security_group_id: self.ingress_security_group,
                        type: "ingress",
-                       from_port: port[:number],
-                       to_port: port[:number],
+                       from_port: port[:upstream_port],
+                       to_port: port[:upstream_port],
                        protocol: port[:type] == "udp" ? "udp" : "tcp",
                        cidr_blocks: [cidr],
                      }
@@ -104,8 +104,8 @@ module Terrafying
             resource :aws_security_group_rule, "#{@name}-to-#{other_resource.name}-#{port[:name]}", {
                        security_group_id: self.ingress_security_group,
                        type: "ingress",
-                       from_port: port[:number],
-                       to_port: port[:number],
+                       from_port: port[:upstream_port],
+                       to_port: port[:upstream_port],
                        protocol: port[:type] == "udp" ? "udp" : "tcp",
                        source_security_group_id: other_resource.egress_security_group,
                      }
@@ -113,8 +113,8 @@ module Terrafying
             resource :aws_security_group_rule, "#{other_resource.name}-to-#{@name}-#{port[:name]}", {
                        security_group_id: other_resource.egress_security_group,
                        type: "egress",
-                       from_port: port[:number],
-                       to_port: port[:number],
+                       from_port: port[:downstream_port],
+                       to_port: port[:downstream_port],
                        protocol: port[:type] == "udp" ? "udp" : "tcp",
                        source_security_group_id: self.ingress_security_group,
                      }

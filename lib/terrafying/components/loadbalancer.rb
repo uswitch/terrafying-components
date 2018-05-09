@@ -105,11 +105,11 @@ module Terrafying
         @target_groups = []
 
         @ports.each { |port|
-          port_ident = "#{ident}-#{port[:number]}"
+          port_ident = "#{ident}-#{port[:downstream_port]}"
 
           target_group = resource :aws_lb_target_group, port_ident, {
                                     name: port_ident,
-                                    port: port[:number],
+                                    port: port[:downstream_port],
                                     protocol: port[:type].upcase,
                                     vpc_id: vpc.id,
                                   }.merge(port.has_key?(:health_check) ? { health_check: port[:health_check] }: {})
@@ -124,7 +124,7 @@ module Terrafying
 
           resource :aws_lb_listener, port_ident, {
                      load_balancer_arn: @id,
-                     port: port[:number],
+                     port: port[:upstream_port],
                      protocol: port[:type].upcase,
                      default_action: {
                        target_group_arn: target_group,
