@@ -1,3 +1,4 @@
+require 'aws-sdk-autoscaling'
 require 'erb'
 require 'ostruct'
 
