@@ -55,7 +55,7 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.7.0)
     rspec-support (3.7.1)
-    terrafying (1.4.1)
+    terrafying (1.4.2)
       aws-sdk-autoscaling (~> 1)
       aws-sdk-core (~> 3)
       aws-sdk-dynamodb (~> 1)
