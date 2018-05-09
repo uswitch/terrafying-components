@@ -1,4 +1,3 @@
-require 'aws-sdk-autoscaling'
 require 'terrafying'
 require 'terrafying/components/dynamicset'
 require 'terrafying/components/instanceprofile'
