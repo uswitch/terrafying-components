@@ -76,6 +76,22 @@ RSpec.describe Terrafying::Components::VPC do
       expect(vpc.subnets[:secure].count).to eq(@azs.count)
     end
 
+    it "should propergate tags down to the subnet resource" do
+      vpc = Terrafying::Components::VPC.create(
+        "foo", "10.0.0.0/16", {
+          internet_access: false,
+          subnets: {
+            offgrid: { internet: false, tags: { foo: "bar" } },
+          },
+        },
+      )
+
+      subnets = vpc.output_with_children["resource"]["aws_subnet"].values
+
+      expect(subnets.count).to eq(@azs.count)
+      expect(subnets[0][:tags][:foo]).to eq("bar")
+    end
+
   end
 
   it "should create a security group for SSH around the VPC" do

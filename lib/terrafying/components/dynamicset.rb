@@ -36,7 +36,7 @@ module Terrafying
           public: false,
           ami: aws.ami("base-image-59a5b709", owners=["136393635417"]),
           instance_type: "t2.micro",
-          instances: { min: 1, max: 1, desired: 1 },
+          instances: { min: 1, max: 1, desired: 1, tags: {} },
           ports: [],
           instance_profile: nil,
           security_groups: [],
@@ -107,7 +107,7 @@ module Terrafying
             },
           }.merge(options)
         end
-        tags = { Name: ident, service_name: name,}.merge(options[:tags]).map { |k,v| { Key: k, Value: v, PropagateAtLaunch: true }}
+        tags = { Name: ident, service_name: name,}.merge(options[:tags]).merge(options[:instances][:tags]).map { |k,v| { Key: k, Value: v, PropagateAtLaunch: true }}
 
         asg = resource :aws_cloudformation_stack, ident, {
                          name: ident,

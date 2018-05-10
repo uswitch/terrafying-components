@@ -383,6 +383,7 @@ module Terrafying
           public: false,
           bit_size: @subnet_size,
           internet: true,
+          tags: {},
         }.merge(options)
 
         if options[:public]
@@ -394,7 +395,7 @@ module Terrafying
         end
 
         @subnets[name] = @azs.zip(gateways).map { |az, gateway|
-          subnet_options = { tags: { subnet_name: name }.merge(@tags) }
+          subnet_options = { tags: { subnet_name: name }.merge(options[:tags]).merge(@tags) }
           if gateway != nil
             if options[:public]
               subnet_options[:gateway] = gateway

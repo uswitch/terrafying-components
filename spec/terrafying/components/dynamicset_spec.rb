@@ -58,7 +58,7 @@ RSpec.describe Terrafying::Components::DynamicSet do
     asg = Aws::AutoScaling::Types::AutoScalingGroup.new(min_size: 3, max_size: 10, desired_capacity: 6)
     allow(@aws).to receive(:asgs_by_tags).and_return([asg])
 
-    dynamic_set = Terrafying::Components::DynamicSet.create_in(@vpc, "foo", { instances: { min: 1, max: 1, desired: 1, track: true } })
+    dynamic_set = Terrafying::Components::DynamicSet.create_in(@vpc, "foo", { instances: { min: 1, max: 1, desired: 1, track: true, tags: {} } })
 
     output = dynamic_set.output_with_children
     template_body = JSON.parse(output["resource"]["aws_cloudformation_stack"].values.first[:template_body])

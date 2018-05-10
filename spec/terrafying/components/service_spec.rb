@@ -151,7 +151,7 @@ RSpec.describe Terrafying::Components::Service do
   it "should create a dynamic set when instances is a hash" do
     service = Terrafying::Components::Service.create_in(
       @vpc, "foo", {
-        instances: { min: 1, max: 1, desired: 1 },
+        instances: { min: 1, max: 1, desired: 1, tags: {} },
       }
     )
 
@@ -160,11 +160,30 @@ RSpec.describe Terrafying::Components::Service do
     expect(output["resource"]["aws_cloudformation_stack"].count).to eq(1)
   end
 
+  it "should pass down instance tags to asg" do
+    service = Terrafying::Components::Service.create_in(
+      @vpc, "foo", {
+        instances: { min: 1, max: 1, desired: 1, tags: { foo: "bar" } },
+      }
+    )
+
+    output = service.output_with_children["resource"]["aws_cloudformation_stack"].values.first
+
+    expect(output).not_to be_nil
+
+    asg_config = JSON.parse(output[:template_body])
+    tags = asg_config["Resources"]["AutoScalingGroup"]["Properties"]["Tags"]
+
+    foo_tag = tags.select { |tag| tag["Key"] == "foo" }.first
+
+    expect(foo_tag["Value"]).to eq("bar")
+  end
+
   context "asg health check" do
     it "it should default to EC2 checks" do
       service = Terrafying::Components::Service.create_in(
         @vpc, "foo", {
-          instances: { min: 1, max: 1, desired: 1 },
+          instances: { min: 1, max: 1, desired: 1, tags: {} },
           ports: [443],
         }
       )
@@ -179,7 +198,7 @@ RSpec.describe Terrafying::Components::Service do
     it "should set an elb health check on dynamic set if it has a load balancer and some health checks" do
       service = Terrafying::Components::Service.create_in(
         @vpc, "foo", {
-          instances: { min: 1, max: 1, desired: 1 },
+          instances: { min: 1, max: 1, desired: 1, tags: {} },
           ports: [{ number: 443, health_check: { path: "/foo", protocol: "HTTPS" }}],
         }
       )
@@ -239,7 +258,7 @@ RSpec.describe Terrafying::Components::Service do
     it "should generate a service resource" do
       service = Terrafying::Components::Service.create_in(
         @vpc, "foo", {
-          instances: { min: 1, max: 1, desired: 1 },
+          instances: { min: 1, max: 1, desired: 1, tags: {} },
           ports: [443],
         }
       )
@@ -258,7 +277,7 @@ RSpec.describe Terrafying::Components::Service do
     it "should create the security groups for ALB to talk to ASG" do
       service = Terrafying::Components::Service.create_in(
         @vpc, "foo", {
-          instances: { min: 1, max: 1, desired: 1 },
+          instances: { min: 1, max: 1, desired: 1, tags: {} },
           ports: [{ type: "https", number: 443 }],
         }
       )
@@ -310,7 +329,7 @@ RSpec.describe Terrafying::Components::Service do
     it "should create no security groups, beyond path mtu, for NLBs" do
       service = Terrafying::Components::Service.create_in(
         @vpc, "foo", {
-          instances: { min: 1, max: 1, desired: 1 },
+          instances: { min: 1, max: 1, desired: 1, tags: {} },
           ports: [443],
         }
       )
@@ -328,14 +347,14 @@ RSpec.describe Terrafying::Components::Service do
     it "shouldn't use ALB as egress security group when binding services" do
       service = Terrafying::Components::Service.create_in(
         @vpc, "foo", {
-          instances: { min: 1, max: 1, desired: 1 },
+          instances: { min: 1, max: 1, desired: 1, tags: {} },
           ports: [{ type: "https", number: 443 }],
         }
       )
 
       service_b = Terrafying::Components::Service.create_in(
         @vpc, "foo", {
-          instances: { min: 1, max: 1, desired: 1 },
+          instances: { min: 1, max: 1, desired: 1, tags: {} },
           ports: [{ type: "https", number: 443 }],
         }
       )
