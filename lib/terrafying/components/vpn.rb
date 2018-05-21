@@ -47,7 +47,8 @@ module Terrafying
           static: false,
           route_all_traffic: false,
           units: [],
-          tags: {}
+          tags: {},
+          service: {},
         }.merge(options)
 
         @name = name
@@ -118,7 +119,7 @@ module Terrafying
                                 ]
                               }
                             ],
-                          }
+                          }.merge(options[:service])
                         )
 
         if oauth2_provider[:type] == "azure" and oauth2_provider[:register]
