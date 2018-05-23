@@ -1,4 +1,12 @@
 pipeline:
+  test:
+    image: ruby:2.5.1
+    commands:
+      - bundle install
+      - bundle exec rake
+    when:
+      event: push
+
   docker:
     image: plugins/docker
     repo: quay.io/uswitch/terrafying-components
@@ -10,32 +18,23 @@ pipeline:
     when:
       event: push
 
-  test:
-    image:  quay.io/uswitch/terrafying-components:${DRONE_COMMIT_SHA}
+  docker-tag:
+    image: plugins/docker
+    repo: quay.io/uswitch/terrafying-components
+    registry: quay.io
+    secrets: [ docker_username, docker_password ]
+    auto_tag: true
+    when:
+      event: [push, tag]
+
+  rubygems:
+    image: ruby:2.4
+    secrets: [ rubygems_api_key ]
     commands:
-      - bundle exec rspec spec/
-    when:
-      event: push
-
-  docker-latest:
-    image: plugins/docker
-    repo: quay.io/uswitch/terrafying-components
-    registry: quay.io
-    secrets: [ docker_username, docker_password ]
-    tags:
-      - ${DRONE_COMMIT_SHA}
-      - latest
-    when:
-      event: push
-      branch: master
-
-  tag:
-    image: plugins/docker
-    repo: quay.io/uswitch/terrafying-components
-    registry: quay.io
-    secrets: [ docker_username, docker_password ]
-    tags:
-      - ${DRONE_TAG}
+      - bundle install
+      - sed -i 's/0\.0\.0/${DRONE_TAG}/' lib/terrafying/components/version.rb
+      - gem build terrafying_components.gemspec
+      - bundle exec rake push
     when:
       event: tag
       branch: master
