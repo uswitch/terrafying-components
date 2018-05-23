@@ -125,27 +125,50 @@ RSpec.describe Terrafying::Components::Ignition, '#generate' do
            end).to be true
   end
 
-  it "adds in files" do
-    user_data = Terrafying::Components::Ignition.generate(
-      {
-        files: [{ path: "/etc/app/app.conf", mode: "0999", contents: "LOOL" }],
-      }
-    )
+  context 'files' do
 
-    files = JSON.parse(user_data, { symbolize_names: true })[:storage][:files]
+    it 'adds in files with string contents' do
+      user_data = Terrafying::Components::Ignition.generate(
+        {
+          files: [{ path: "/etc/app/app.conf", mode: "0999", contents: "LOOL" }],
+        }
+      )
 
-    expect(files.any? do |file|
-             file == {
-               filesystem: "root",
-               mode: "0999",
-               path: "/etc/app/app.conf",
-               user: { id: 0 },
-               group: { id: 0 },
-               contents: { source: "data:;base64,TE9PTA==" },
-             }
-           end).to be true
+      files = JSON.parse(user_data, { symbolize_names: true })[:storage][:files]
+
+      expect(files.any? do |file|
+               file == {
+                 filesystem: "root",
+                 mode: "0999",
+                 path: "/etc/app/app.conf",
+                 user: { id: 0 },
+                 group: { id: 0 },
+                 contents: { source: "data:;base64,TE9PTA==" },
+               }
+             end).to be true
+    end
+
+    it 'adds in files with sources' do
+      user_data = Terrafying::Components::Ignition.generate(
+        {
+          files: [{ path: '/etc/app/app.conf', mode: '0999', contents: { source: 's3://bucket/file' } }],
+        }
+      )
+
+      files = JSON.parse(user_data, { symbolize_names: true })[:storage][:files]
+
+      expect(files).to include(
+       {
+         filesystem: 'root',
+         mode: '0999',
+         path: '/etc/app/app.conf',
+         user: { id: 0 },
+         group: { id: 0 },
+         contents: { source: 's3://bucket/file' }
+       }
+     )
+    end
   end
-
   it 'passes through the ssh_group' do
     user_data = Terrafying::Components::Ignition.generate(
       {
