@@ -12,10 +12,18 @@ pipeline:
     repo: quay.io/uswitch/terrafying-components
     registry: quay.io
     secrets: [ docker_username, docker_password ]
-    auto_tag: true
     tags:
       - ${DRONE_COMMIT_SHA}
       - ${DRONE_COMMIT_BRANCH}
+    when:
+      event: push
+
+  docker-tag:
+    image: plugins/docker
+    repo: quay.io/uswitch/terrafying-components
+    registry: quay.io
+    secrets: [ docker_username, docker_password ]
+    auto_tag: true
     when:
       event: [push, tag]
 
