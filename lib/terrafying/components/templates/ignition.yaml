@@ -64,7 +64,12 @@ storage:
       mode: <%= file[:mode] %>
       user: { id: 0 }
       group: { id: 0 }
+      <% if file[:contents].is_a?(Hash) %>
+      contents:
+        source: "<%= file[:contents][:source] %>"
+      <% else %>
       contents: "<%= file[:contents].gsub(/\n/, '\\n').gsub(/\"/, '\\"') %>"
+      <% end %>
     <% } %>
     <% cas.each { |ca| %>
     - filesystem: "root"
