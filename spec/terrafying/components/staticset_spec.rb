@@ -1,6 +1,7 @@
 require 'terrafying'
 require 'terrafying/components/staticset'
 
+RSpec::Matchers.define_negated_matcher :not_have_key, :have_key
 
 RSpec.describe Terrafying::Components::StaticSet do
 
@@ -41,6 +42,53 @@ RSpec.describe Terrafying::Components::StaticSet do
 
     expect(output["resource"]["aws_ebs_volume"].count).to eq(instances.count * volumes.count)
     expect(output["resource"]["aws_volume_attachment"].count).to eq(instances.count * volumes.count)
+  end
+
+  it 'should have no kms_key_id key' do
+    instances = [{}, {}]
+    volumes = [
+      {
+        size: 100,
+        device: '/dev/xvdl',
+        mount:  '/mnt/data'
+      }
+    ]
+
+    set = Terrafying::Components::StaticSet.create_in(
+      @vpc, 'foo', { instances: instances, volumes: volumes }
+    )
+
+    volumes = set.output_with_children['resource']['aws_ebs_volume'].values
+
+    expect(volumes).to include(
+      not_have_key(:kms_key_id)
+    )
+  end
+
+  it 'should create encrypted volumes for each instance based on spec' do
+    instances = [{}, {}]
+    volumes = [
+      {
+        size: 100,
+        device: '/dev/xvdl',
+        mount:  '/mnt/data',
+        encrypted:  true,
+        kms_key_id: 'my_key_id'
+      }
+    ]
+
+    set = Terrafying::Components::StaticSet.create_in(
+      @vpc, 'foo', { instances: instances, volumes: volumes }
+    )
+
+    volumes = set.output_with_children['resource']['aws_ebs_volume'].values
+
+    expect(volumes).to include(
+      a_hash_including({
+        encrypted: true,
+        kms_key_id: 'my_key_id'
+      })
+    )
   end
 
   it "should setup security group rules for instances to talk to each other on" do

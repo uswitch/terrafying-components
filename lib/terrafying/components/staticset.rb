@@ -75,7 +75,7 @@ module Terrafying
 
         path_mtu_setup!
 
-        @instances = options[:instances].map.with_index {|config, i|
+        @instances = options[:instances].map.with_index do |config, i|
           instance_ident = "#{name}-#{i}"
 
           instance = add! Instance.create_in(
@@ -93,26 +93,11 @@ module Terrafying
                              )
 
           options[:volumes].each.with_index { |volume, vol_i|
-            volume_name = "#{instance_ident}-#{vol_i}"
-            volume_id = resource :aws_ebs_volume, volume_name, {
-                                   availability_zone: instance.subnet.az,
-                                   size: volume[:size],
-                                   type: volume.fetch(:type, "gp2"),
-                                   tags: {
-                                     Name: volume_name,
-                                   }.merge(options[:tags]),
-                                 }
-
-            resource :aws_volume_attachment, volume_name, {
-                       device_name: volume[:device],
-                       volume_id: volume_id,
-                       instance_id: instance.id,
-                       force_detach: true,
-                     }
+            volume_for("#{instance_ident}-#{vol_i}", instance, volume, options[:tags])
           }
 
           instance
-        }
+        end
 
         @ports.each { |port|
           resource :aws_security_group_rule, "#{@name}-to-self-#{port[:name]}", {
@@ -126,6 +111,28 @@ module Terrafying
         }
 
         self
+      end
+
+      def volume_for(name, instance, volume, tags)
+        vol_opts = {
+          availability_zone: instance.subnet.az,
+          size: volume[:size],
+          type: volume[:type] || 'gp2',
+          encrypted:  volume[:encrypted] || false,
+          kms_key_id: volume[:kms_key_id],
+          tags: {
+            Name: name
+          }.merge(tags)
+        }.reject { |_, v| v.nil? }
+
+        volume_id = resource :aws_ebs_volume, name, vol_opts
+
+        resource :aws_volume_attachment, name, {
+          device_name: volume[:device],
+          volume_id:   volume_id,
+          instance_id: instance.id,
+          force_detach: true
+        }
       end
 
       def attach_load_balancer(load_balancer)
