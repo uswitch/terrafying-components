@@ -19,5 +19,5 @@ GEM_CONFIG
 
   tag = ENV['DRONE_TAG']
 
-  `gem push --config-file .gemconfig terrafying-#{tag}.gem`
+  `gem push --config-file .gemconfig terrafying-components-#{tag}.gem`
 end
