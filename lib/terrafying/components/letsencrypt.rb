@@ -1,7 +1,7 @@
 
 require 'terrafying/components/ca'
 require 'terrafying/generator'
-
+require 'open-uri'
 module Terrafying
 
   module Components
@@ -11,8 +11,14 @@ module Terrafying
       attr_reader :name, :source
 
       PROVIDERS = {
-        staging: "https://acme-staging.api.letsencrypt.org/directory",
-        live:    "https://acme-v01.api.letsencrypt.org/directory"
+        staging: {
+          api_url: 'https://acme-staging.api.letsencrypt.org/directory',
+          ca_cert: 'https://letsencrypt.org/certs/fakeleintermediatex1.pem'
+        },
+        live:    {
+          api_url: 'https://acme-v01.api.letsencrypt.org/directory',
+          ca_cert: 'https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt'
+        }
       }.freeze
 
       include CA
@@ -36,7 +42,7 @@ module Terrafying
         @name = name
         @bucket = bucket
         @prefix = options[:prefix]
-        @server_url = PROVIDERS[options[:provider].to_sym]
+        @provider = PROVIDERS[options[:provider].to_sym]
 
         provider :acme, {}
         provider :tls, {}
@@ -49,7 +55,7 @@ module Terrafying
         @account_key = output_of(:tls_private_key, "#{@name}-account", "private_key_pem")
 
         @registration_url = resource :acme_registration, "#{@name}-reg", {
-                                       server_url: @server_url,
+                                       server_url: @provider[:server_url],
                                        account_key_pem: @account_key,
                                        email_address: options[:email_address],
                                      }
@@ -60,18 +66,16 @@ module Terrafying
                    content: @account_key,
                  }
 
-        if options[:public_certificate]
-          cert_acl = "public-read"
-        else
-          cert_acl = "private"
-        end
+        @ca_cert_acl = options[:public_certificate] ? 'public-read' : 'private'
 
-        resource :aws_s3_bucket_object, "#{@name}-cert", {
-                   bucket: @bucket,
-                   key: File.join(@prefix, @name, "ca.cert"),
-                   content: "we don't care as it's trusted, just want parity",
-                   acl: cert_acl,
-                 }
+        open(@provider[:ca_cert], 'rb') do |cert|
+          resource :aws_s3_bucket_object, "#{@name}-cert", {
+                     bucket: @bucket,
+                     key: File.join(@prefix, @name, "ca.cert"),
+                     source: cert.read,
+                     acl: @ca_cert_acl
+                   }
+        end
 
         @source = File.join("s3://", @bucket, @prefix, @name, "ca.cert")
 
@@ -112,7 +116,7 @@ module Terrafying
                      }
 
         ctx.resource :acme_certificate, key_ident, {
-                       server_url: @server_url,
+                       server_url: @provider[:server_url],
                        account_key_pem: @account_key,
                        registration_url: @registration_url,
                        min_days_remaining: options[:min_days_remaining],
