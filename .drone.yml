@@ -33,7 +33,7 @@ pipeline:
     commands:
       - bundle install
       - sed -i 's/0\.0\.0/${DRONE_TAG}/' lib/terrafying/components/version.rb
-      - gem build terrafying_components.gemspec
+      - gem build terrafying-components.gemspec
       - bundle exec rake push
     when:
       event: tag
