@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    terrafying_components (0.0.0)
+    terrafying-components (0.0.0)
       netaddr (~> 1.5)
       terrafying (~> 1)
       xxhash (~> 0.4.0)
@@ -9,18 +9,20 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    aws-partitions (1.86.0)
+    aws-eventstream (1.0.0)
+    aws-partitions (1.87.0)
     aws-sdk-autoscaling (1.5.0)
       aws-sdk-core (~> 3)
       aws-sigv4 (~> 1.0)
-    aws-sdk-core (3.20.2)
+    aws-sdk-core (3.21.2)
+      aws-eventstream (~> 1.0)
       aws-partitions (~> 1.0)
       aws-sigv4 (~> 1.0)
       jmespath (~> 1.0)
     aws-sdk-dynamodb (1.6.0)
       aws-sdk-core (~> 3)
       aws-sigv4 (~> 1.0)
-    aws-sdk-ec2 (1.33.0)
+    aws-sdk-ec2 (1.34.0)
       aws-sdk-core (~> 3)
       aws-sigv4 (~> 1.0)
     aws-sdk-elasticloadbalancingv2 (1.8.0)
@@ -32,8 +34,8 @@ GEM
     aws-sdk-route53 (1.9.0)
       aws-sdk-core (~> 3)
       aws-sigv4 (~> 1.0)
-    aws-sdk-s3 (1.10.0)
-      aws-sdk-core (~> 3)
+    aws-sdk-s3 (1.13.0)
+      aws-sdk-core (~> 3, >= 3.21.2)
       aws-sdk-kms (~> 1)
       aws-sigv4 (~> 1.0)
     aws-sigv4 (1.0.2)
@@ -78,7 +80,7 @@ DEPENDENCIES
   rake (~> 10.0)
   rspec (~> 3.7)
   rspec-mocks (~> 3.7)
-  terrafying_components!
+  terrafying-components!
 
 BUNDLED WITH
    1.16.1

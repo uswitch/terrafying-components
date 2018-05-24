@@ -4,7 +4,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'terrafying/components/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "terrafying_components"
+  spec.name          = "terrafying-components"
   spec.version       = Terrafying::Components::VERSION
   spec.authors       = ["uSwitch Limited"]
   spec.email         = ["developers@uswitch.com"]
