@@ -326,7 +326,7 @@ RSpec.describe Terrafying::Components::Service do
       expect(instance_to_lb_rules[0][:to_port]).to eq(443)
     end
 
-    it "should create no security groups, beyond path mtu, for NLBs" do
+    it "should create no security groups for NLBs" do
       service = Terrafying::Components::Service.create_in(
         @vpc, "foo", {
           instances: { min: 1, max: 1, desired: 1, tags: {} },
@@ -341,7 +341,7 @@ RSpec.describe Terrafying::Components::Service do
       }
       instance_to_lb_rules = instance_rules.select { |r| r[:source_security_group_id] == service.load_balancer.security_group }
 
-      expect(instance_to_lb_rules.count).to eq(1)
+      expect(instance_to_lb_rules.count).to eq(0)
     end
 
     it "shouldn't use ALB as egress security group when binding services" do

@@ -1,4 +1,6 @@
 
+require 'xxhash'
+
 require 'terrafying/components/usable'
 
 module Terrafying
