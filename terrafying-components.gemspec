@@ -14,6 +14,7 @@ Gem::Specification.new do |spec|
   spec.description   = %q{No.}
   spec.homepage      = "https://github.com/uswitch/terrafying-components"
 
+  spec.files         = `git ls-files lib/`.split($RS)
   spec.require_paths = ["lib"]
 
   spec.add_development_dependency 'bundler', '~> 1.11'
@@ -21,7 +22,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rspec', '~> 3.7'
   spec.add_development_dependency 'rspec-mocks', '~> 3.7'
 
-  spec.add_runtime_dependency 'netaddr', '~> 1.5'
   spec.add_runtime_dependency 'terrafying', '~> 1'
-  spec.add_runtime_dependency 'xxhash', '~> 0.4.0'
 end

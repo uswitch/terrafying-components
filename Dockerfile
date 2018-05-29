@@ -24,6 +24,7 @@ RUN apk add --update --no-cache --virtual .terra-builddeps build-base ruby-dev \
  && apk add --update --no-cache --virtual .terra-rundeps git \
  && cd /usr/src/app \
  && bundle install \
+ && rake install \
  && install -d /terra \
  && apk del .terra-builddeps \
  && rm -rf /var/cache/apk/*
