@@ -40,6 +40,8 @@ pipeline:
     repo: quay.io/uswitch/terrafying-components
     registry: quay.io
     secrets: [ docker_username, docker_password ]
+    build_args:
+      - TERRAFYING_VERSION=${DRONE_TAG}
     auto_tag: true
     when:
       event: tag

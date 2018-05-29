@@ -1,5 +1,7 @@
 FROM ruby:2.4-alpine3.7
 
+ARG TERRAFYING_VERSION=0.0.0
+
 RUN apk --update add --no-cache --virtual .azure-builddeps build-base python2-dev \
  && apk add --no-cache --virtual .azure-rundeps python2 py-setuptools py2-pip bash \
  && pip install --no-cache-dir azure-cli-profile azure-cli-role \
@@ -18,18 +20,15 @@ RUN wget -O terraform-provider-acme.zip https://github.com/paybyphone/terraform-
  && install -m 755 terraform-provider-acme /root/.terraform.d/plugins/linux_amd64/terraform-provider-acme_v0.4.0 \
  && rm terraform-provider-acme terraform-provider-acme.zip
 
-COPY . /usr/src/app
+COPY pkg /tmp
 
 RUN apk add --update --no-cache --virtual .terra-builddeps build-base ruby-dev \
- && apk add --update --no-cache --virtual .terra-rundeps git \
- && cd /usr/src/app \
- && bundle install \
- && rake install \
+ && apk add --update --no-cache --virtual .terra-rundeps git bash \
+ && gem install /tmp/terrafying-components-${TERRAFYING_VERSION}.gem \
  && install -d /terra \
  && apk del .terra-builddeps \
  && rm -rf /var/cache/apk/*
 
 WORKDIR /terra
 
-CMD ["help"]
-ENTRYPOINT ["/usr/src/app/bin/entrypoint.sh"]
+ENTRYPOINT ["/bin/bash"]
