@@ -31,4 +31,5 @@ RUN apk add --update --no-cache --virtual .terra-builddeps build-base ruby-dev \
 
 WORKDIR /terra
 
-ENTRYPOINT ["/bin/bash"]
+ENTRYPOINT []
+CMD ["/bin/bash"]
