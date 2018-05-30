@@ -72,7 +72,7 @@ module Terrafying
           resource :aws_s3_bucket_object, "#{@name}-cert", {
                      bucket: @bucket,
                      key: File.join(@prefix, @name, "ca.cert"),
-                     source: cert.read,
+                     content: cert.read,
                      acl: @ca_cert_acl
                    }
         end
