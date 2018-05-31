@@ -55,7 +55,7 @@ module Terrafying
         @account_key = output_of(:tls_private_key, "#{@name}-account", "private_key_pem")
 
         @registration_url = resource :acme_registration, "#{@name}-reg", {
-                                       server_url: @provider[:server_url],
+                                       server_url: @provider[:api_url],
                                        account_key_pem: @account_key,
                                        email_address: options[:email_address],
                                      }
