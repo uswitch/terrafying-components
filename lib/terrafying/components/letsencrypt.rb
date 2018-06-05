@@ -12,12 +12,12 @@ module Terrafying
 
       PROVIDERS = {
         staging: {
-          api_url: 'https://acme-staging.api.letsencrypt.org/directory',
-          ca_cert: 'https://letsencrypt.org/certs/fakeleintermediatex1.pem'
+          server_url: 'https://acme-staging.api.letsencrypt.org/directory',
+          ca_cert:    'https://letsencrypt.org/certs/fakeleintermediatex1.pem'
         },
         live:    {
-          api_url: 'https://acme-v01.api.letsencrypt.org/directory',
-          ca_cert: 'https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt'
+          server_url: 'https://acme-v01.api.letsencrypt.org/directory',
+          ca_cert:    'https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt'
         }
       }.freeze
 
@@ -55,7 +55,7 @@ module Terrafying
         @account_key = output_of(:tls_private_key, "#{@name}-account", "private_key_pem")
 
         @registration_url = resource :acme_registration, "#{@name}-reg", {
-                                       server_url: @provider[:api_url],
+                                       server_url: @provider[:server_url],
                                        account_key_pem: @account_key,
                                        email_address: options[:email_address],
                                      }
