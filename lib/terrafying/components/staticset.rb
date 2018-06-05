@@ -103,8 +103,8 @@ module Terrafying
           resource :aws_security_group_rule, "#{@name}-to-self-#{port[:name]}", {
                      security_group_id: @security_group,
                      type: "ingress",
-                     from_port: port[:upstream_port],
-                     to_port: port[:upstream_port],
+                     from_port: from_port(port[:upstream_port]),
+                     to_port: to_port(port[:upstream_port]),
                      protocol: port[:type],
                      self: true,
                    }
