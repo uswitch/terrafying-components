@@ -26,6 +26,20 @@ def enrich_ports(ports)
   }
 end
 
+def from_port(port)
+  return port unless port_range?(port)
+  port.split('-').first.to_i
+end
+
+def to_port(port)
+  return port unless port_range?(port)
+  port.split('-').last.to_i
+end
+
+def port_range?(port)
+  port.is_a?(String) && port.match(/[0-9]+-[0-9]+/)
+end
+
 def is_l4_port(port)
   port[:type] == "tcp" || port[:type] == "udp"
 end

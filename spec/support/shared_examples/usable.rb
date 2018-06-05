@@ -159,4 +159,45 @@ shared_examples "a usable resource" do
     ).to be true
   end
 
+  it 'should map from and to port when a range is passed in' do
+    test_resource = described_class.create_in(
+      @vpc, 'some-thing', {
+        ports: [
+          number: '1000-1200'
+        ]
+      }
+    )
+
+    test_resource.used_by_cidr('10.1.0.0/16')
+
+    rules = test_resource.output_with_children['resource']['aws_security_group_rule'].values
+
+    expect(rules).to include(
+      a_hash_including(
+        from_port: 1000,
+        to_port:   1200
+      )
+    )
+  end
+
+  it 'should map port when a number is passed in' do
+    test_resource = described_class.create_in(
+      @vpc, 'some-thing', {
+        ports: [
+          number: 1200
+        ]
+      }
+    )
+
+    test_resource.used_by_cidr('10.1.0.0/16')
+
+    rules = test_resource.output_with_children['resource']['aws_security_group_rule'].values
+
+    expect(rules).to include(
+      a_hash_including(
+        from_port: 1200,
+        to_port:   1200
+      )
+    )
+  end
 end
