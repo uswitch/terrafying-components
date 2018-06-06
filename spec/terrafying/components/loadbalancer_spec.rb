@@ -1,5 +1,7 @@
 require 'terrafying'
+require 'terrafying/components/instance'
 require 'terrafying/components/loadbalancer'
+require 'terrafying/components/staticset'
 
 
 RSpec.describe Terrafying::Components::LoadBalancer do
@@ -62,6 +64,26 @@ RSpec.describe Terrafying::Components::LoadBalancer do
 
     expect(listener[:ssl_policy]).to_not be nil
     expect(listener[:certificate_arn]).to eq("some-arn")
+  end
+
+  it "should map usable to attached set when NLB" do
+    set = Terrafying::Components::StaticSet.create_in(@vpc, "wibble")
+    lb = Terrafying::Components::LoadBalancer.create_in(
+      @vpc, "foo", {
+        ports: [
+          { type: "tcp", number: 1234 },
+        ],
+      }
+    )
+
+    lb.attach(set)
+    lb.used_by_cidr("1.2.3.4/32")
+
+    sg_rules = lb.output_with_children["resource"].fetch("aws_security_group_rule", {}).values
+
+    expect(sg_rules.count).to eq(1)
+    expect(sg_rules[0][:security_group_id]).to eq(set.ingress_security_group)
+    expect(sg_rules[0][:cidr_blocks]).to eq(["1.2.3.4/32"])
   end
 
 end

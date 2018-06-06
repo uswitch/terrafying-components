@@ -147,6 +147,10 @@ module Terrafying
       def attach(set)
         if set.respond_to?(:attach_load_balancer)
           set.attach_load_balancer(self)
+
+          if @type == "network"
+            @security_group = set.ingress_security_group
+          end
         else
           raise "Dont' know how to attach object to LB"
         end
