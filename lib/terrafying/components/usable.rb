@@ -43,7 +43,7 @@ module Terrafying
 
       def used_by_cidr(*cidrs, &block)
         cidrs.map do |cidr|
-          cidr_ident = cidr.gsub('./', '-')
+          cidr_ident = cidr.tr('./', '-')
 
           @ports.select(&block).map do |port|
             resource :aws_security_group_rule, "#{@name}-to-#{cidr_ident}-#{port[:name]}", {

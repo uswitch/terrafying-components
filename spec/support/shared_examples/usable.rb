@@ -1,4 +1,5 @@
 RSpec::Matchers.define_negated_matcher :not_include, :include
+RSpec::Matchers.define_negated_matcher :not_match, :match
 
 shared_examples "a usable resource" do
 
@@ -218,5 +219,14 @@ shared_examples "a usable resource" do
         from_port: 443, to_port: 443, cidr_blocks: ['0.0.0.0/0']
       )
     )
+  end
+
+  it 'should replace [./] with [-] in the cidr when naming the resource' do
+    @main_resource.used_by_cidr('0.0.0.0/0') { |port| port[:upstream_port] != 443 }
+
+    keys = @main_resource.output_with_children['resource']['aws_security_group_rule'].keys
+
+    expect(keys).to all(not_match('0.0.0.0/0'))
+    expect(keys).to include(a_string_matching('0-0-0-0-0'))
   end
 end
