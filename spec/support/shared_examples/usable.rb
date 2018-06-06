@@ -1,3 +1,5 @@
+RSpec::Matchers.define_negated_matcher :not_include, :include
+
 shared_examples "a usable resource" do
 
   it { is_expected.to respond_to(:used_by) }
@@ -197,6 +199,23 @@ shared_examples "a usable resource" do
       a_hash_including(
         from_port: 1200,
         to_port:   1200
+      )
+    )
+  end
+
+  it 'should filter out ports using the block' do
+    @main_resource.used_by_cidr('0.0.0.0/0') { |port| port[:upstream_port] != 443 }
+
+    rules = @main_resource.output_with_children['resource']['aws_security_group_rule'].values
+
+    expect(rules).to include(
+      a_hash_including(
+        from_port: 80, to_port: 80, cidr_blocks: ['0.0.0.0/0']
+      )
+    )
+    expect(rules).to not_include(
+      a_hash_including(
+        from_port: 443, to_port: 443, cidr_blocks: ['0.0.0.0/0']
       )
     )
   end
