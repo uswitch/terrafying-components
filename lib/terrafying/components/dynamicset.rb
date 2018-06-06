@@ -107,7 +107,7 @@ module Terrafying
             },
           }.merge(options)
         end
-        tags = { Name: ident, service_name: name,}.merge(options[:tags]).merge(options[:instances][:tags]).map { |k,v| { Key: k, Value: v, PropagateAtLaunch: true }}
+        tags = { Name: ident, service_name: name,}.merge(options[:tags]).merge(options[:instances].fetch(:tags, {})).map { |k,v| { Key: k, Value: v, PropagateAtLaunch: true }}
 
         asg = resource :aws_cloudformation_stack, ident, {
                          name: ident,
