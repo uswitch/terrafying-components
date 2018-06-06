@@ -204,7 +204,7 @@ shared_examples "a usable resource" do
     )
   end
 
-  it 'should filter out ports using the block' do
+  it 'should filter out ports using the block when used by cidrs' do
     @main_resource.used_by_cidr('0.0.0.0/0') { |port| port[:upstream_port] != 443 }
 
     rules = @main_resource.output_with_children['resource']['aws_security_group_rule'].values
@@ -218,6 +218,24 @@ shared_examples "a usable resource" do
       a_hash_including(
         from_port: 443, to_port: 443, cidr_blocks: ['0.0.0.0/0']
       )
+    )
+  end
+
+  it 'should filter out ports using the block when used by other resources' do
+    other_resource = Terrafying::Components::Instance.create_in(@vpc, 'some-thing-else')
+    another_resource = Terrafying::Components::Instance.create_in(@vpc, 'another-thing')
+
+    resources = [other_resource, another_resource]
+
+    @main_resource.used_by(*resources) { |port| port[:upstream_port] != 443 }
+
+    rules = @main_resource.output_with_children['resource']['aws_security_group_rule'].values
+
+    expect(rules).to include(
+      *resources.map { |res| a_hash_including(from_port: 80, to_port: 80, source_security_group_id: res.egress_security_group) }
+    )
+    expect(rules).to not_include(
+      *resources.map { |res| a_hash_including(from_port: 443, to_port: 443, source_security_group_id: res.egress_security_group) }
     )
   end
 
