@@ -41,18 +41,18 @@ module Terrafying
                    }
       end
 
-      def used_by_cidr(*cidrs)
+      def used_by_cidr(*cidrs, &block)
         cidrs.map { |cidr|
-          cidr_ident = cidr.gsub(/[\.\/]/, "-")
+          cidr_ident = cidr.tr('./', '-')
 
-          @ports.map {|port|
+          @ports.select(&block).map { |port|
             resource :aws_security_group_rule, "#{@name}-to-#{cidr_ident}-#{port[:name]}", {
-                       security_group_id: self.ingress_security_group,
+                       security_group_id: ingress_security_group,
                        type: "ingress",
                        from_port: from_port(port[:upstream_port]),
                        to_port: to_port(port[:upstream_port]),
                        protocol: port[:type] == "udp" ? "udp" : "tcp",
-                       cidr_blocks: [cidr],
+                       cidr_blocks: [cidr]
                      }
           }
         }
@@ -98,9 +98,9 @@ module Terrafying
         }
       end
 
-      def used_by(*other_resources)
+      def used_by(*other_resources, &block)
         other_resources.map { |other_resource|
-          @ports.map {|port|
+          @ports.select(&block).map.map {|port|
             resource :aws_security_group_rule, "#{@name}-to-#{other_resource.name}-#{port[:name]}", {
                        security_group_id: self.ingress_security_group,
                        type: "ingress",
