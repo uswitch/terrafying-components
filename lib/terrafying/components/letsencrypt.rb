@@ -69,13 +69,15 @@ module Terrafying
         @ca_cert_acl = options[:public_certificate] ? 'public-read' : 'private'
 
         open(@provider[:ca_cert], 'rb') do |cert|
-          resource :aws_s3_bucket_object, "#{@name}-cert", {
-                     bucket: @bucket,
-                     key: File.join(@prefix, @name, "ca.cert"),
-                     content: cert.read,
-                     acl: @ca_cert_acl
-                   }
+          @ca_cert = cert.read
         end
+
+        resource :aws_s3_bucket_object, "#{@name}-cert", {
+            bucket: @bucket,
+            key: File.join(@prefix, @name, "ca.cert"),
+            content: @ca_cert,
+            acl: @ca_cert_acl
+        }
 
         @source = File.join("s3://", @bucket, @prefix, @name, "ca.cert")
 
@@ -135,7 +137,7 @@ module Terrafying
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert", {
                        bucket: @bucket,
                        key: File.join(@prefix, @name, name, "cert"),
-                       content: output_of(:acme_certificate, key_ident, :certificate_pem),
+                       content: output_of(:acme_certificate, key_ident, :certificate_pem) + @ca_cert,
                      }
 
         reference_keypair(ctx, name)
