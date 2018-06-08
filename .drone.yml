@@ -5,7 +5,7 @@ pipeline:
       - bundle install
       - rake spec
     when:
-      event: push
+      event: [pull_request, push]
 
   build:
     image: ruby:2.5
