@@ -137,7 +137,7 @@ module Terrafying
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert", {
                        bucket: @bucket,
                        key: File.join(@prefix, @name, name, "cert"),
-                       content: output_of(:acme_certificate, key_ident, :certificate_pem).to_s + '\n' + @ca_cert,
+                       content: output_of(:acme_certificate, key_ident, :certificate_pem).to_s + @ca_cert,
                      }
 
         reference_keypair(ctx, name)
