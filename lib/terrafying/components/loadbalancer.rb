@@ -99,6 +99,9 @@ module Terrafying
                          load_balancer_type: type,
                          internal: !options[:public],
                          subnets: options[:subnets].map(&:id),
+                         subnet_mapping: options[:subnets].map{ |subnet|
+                           {subnet_id: subnet.id}
+                         },
                          tags: options[:tags],
                        }.merge(@type == "application" ? { security_groups: [@security_group] } : {})
 
