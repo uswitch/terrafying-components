@@ -70,19 +70,21 @@ module Terrafying
         self
       end
 
-      def add_record(name, records)
-        add_record_in(self, name,records)
+      def add_record(name, records, options={})
+        add_record_in(self, name, records, options)
       end
 
-      def add_record_in(ctx, name,records)
-        fqdn = qualify(name)
-        ctx.resource :aws_route53_record, tf_safe(fqdn), {
+      def add_record_in(ctx, name, records, options={})
+        options = {
+          type: "A",
+          ttl: 300,
+          name: qualify(name),
+        }.merge(options)
+
+        ctx.resource :aws_route53_record, tf_safe(options[:name]), {
                    zone_id: @id,
-                   name: fqdn,
-                   type: "A",
-                   ttl: 300,
                    records: records,
-                 }
+                 }.merge(options)
       end
 
       def add_alias(name, config)

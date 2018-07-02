@@ -19,5 +19,22 @@ RSpec.describe Terrafying::Components::Zone, '#add_cname_in' do
         }
       )
     end
+
+    it 'can create mx records' do
+      zone = Terrafying::Components::Zone.create('rspec.usw.co')
+
+      zone.add_record("wibble", ["email.server.cloud"], type: "MX", weight: 5)
+
+      mx_record = zone.output['resource']['aws_route53_record']['wibble-rspec-usw-co']
+      expect(mx_record).to include(
+        {
+          name: 'wibble.rspec.usw.co',
+          type: 'MX',
+          ttl:  300,
+          records: ['email.server.cloud'],
+          weight: 5,
+        }
+      )
+    end
   end
 end
