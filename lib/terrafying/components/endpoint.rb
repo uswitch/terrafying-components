@@ -32,7 +32,7 @@ module Terrafying
         }.merge(options)
 
         ident = "#{tf_safe(vpc.name)}-#{name}"
-        @name = name
+        @name = ident
 
         if options[:service]
           service_name = options[:service].service_name
