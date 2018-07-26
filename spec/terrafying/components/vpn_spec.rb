@@ -61,10 +61,10 @@ RSpec.describe Terrafying::Components::VPN do
       vpn_instance = output["resource"]["aws_instance"].values.first
       vpn_user_data = JSON.parse(vpn_instance[:user_data], { symbolize_names: true })
 
-      proxy_unit = vpn_user_data[:systemd][:units].select { |unit| unit[:name] == "oauth2_proxy.service" }.first
+      proxy_unit = vpn_user_data[:systemd][:units].select { |unit| unit[:name] == "authnz.service" }.first
 
-      expect(proxy_unit[:contents]).to include("-client-id='some-id'")
-      expect(proxy_unit[:contents]).to include("-client-secret='some-super-secret-string'")
+      expect(proxy_unit[:contents]).to include("--oauth-client-id='some-id'")
+      expect(proxy_unit[:contents]).to include("--oauth-client-secret='some-super-secret-string'")
     end
   end
 

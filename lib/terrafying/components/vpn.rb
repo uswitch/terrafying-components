@@ -80,10 +80,11 @@ module Terrafying
         keypairs = []
 
         if has_provider
-          vpn_hash = Digest::SHA2.digest(vpc.name + name + oauth2_provider[:client_secret] + oauth2_provider[:client_id])
-          cookie_secret = Base64.strict_encode64(vpn_hash.byteslice(0,16))
+          vpn_hash = Digest::SHA512.hexdigest(vpc.name + name + oauth2_provider[:client_secret] + oauth2_provider[:client_id])
+          oauth2_provider[:cookie_hash_key]  ||= Base64.strict_encode64(vpn_hash.byteslice(0,64))
+          oauth2_provider[:cookie_block_key] ||= Base64.strict_encode64(vpn_hash.byteslice(64,96))
 
-          units.push(oauth2_proxy_service(oauth2_provider, cookie_secret))
+          units.push(oauth2_proxy_service(oauth2_provider))
         end
 
         if options.has_key?(:ca)
@@ -192,31 +193,22 @@ module Terrafying
         )
       end
 
-      def oauth2_proxy_service(oauth2_provider, cookie_secret)
-        optional_arguments = []
-
-        if oauth2_provider.has_key?(:permit_groups)
-          optional_arguments << "-permit-groups '#{oauth2_provider[:permit_groups].join(",")}'"
-        end
-
+      def oauth2_proxy_service(oauth2_provider)
         Ignition.container_unit(
-          "oauth2_proxy", "quay.io/uswitch/oauth2_proxy:stable",
+          'authnz', 'registry.usw.co/cloud/authnz-http-proxy:0.1',
           {
             host_networking: true,
             arguments: [
-              "-client-id='#{oauth2_provider[:client_id]}'",
-              "-client-secret='#{oauth2_provider[:client_secret]}'",
-              "-email-domain='*'",
-              "-cookie-secret='#{cookie_secret}'",
-              "-provider=#{oauth2_provider[:type]}",
-              "-http-address='0.0.0.0:4180'",
-              "-redirect-url='https://#{@fqdn}/oauth2/callback'",
-              "-upstream='http://localhost:8080'",
-              "-approval-prompt=''",
-              "-cookie-secure",
-              "-pass-access-token=true",
-              "-pass-groups",
-            ] + optional_arguments
+              '--addr=0.0.0.0:4180',
+              '--backend-url=http://localhost:8080',
+              "--oauth-client-id='#{oauth2_provider[:client_id]}'",
+              "--oauth-client-secret='#{oauth2_provider[:client_secret]}'",
+              "--cookie-hash-key='#{oauth2_provider[:cookie_hash_key]}'",
+              "--cookie-block-key=''#{oauth2_provider[:cookie_block_key]}'"
+            ],
+            volumes: [
+              '/usr/share/ca-certificates:/etc/ssl/certs:ro'
+            ]
           }
         )
       end
