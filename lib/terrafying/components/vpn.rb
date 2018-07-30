@@ -81,8 +81,8 @@ module Terrafying
 
         if has_provider
           vpn_hash = Digest::SHA512.hexdigest(vpc.name + name + oauth2_provider[:client_secret] + oauth2_provider[:client_id])
-          oauth2_provider[:cookie_hash_key]  ||= Base64.strict_encode64(vpn_hash.byteslice(0,64))
-          oauth2_provider[:cookie_block_key] ||= Base64.strict_encode64(vpn_hash.byteslice(64,96))
+          oauth2_provider[:cookie_hash_key]  ||= vpn_hash.byteslice(0,64)
+          oauth2_provider[:cookie_block_key] ||= vpn_hash.byteslice(64,96)
 
           units.push(oauth2_proxy_service(oauth2_provider))
         end
@@ -204,7 +204,7 @@ module Terrafying
               "--oauth-client-id='#{oauth2_provider[:client_id]}'",
               "--oauth-client-secret='#{oauth2_provider[:client_secret]}'",
               "--cookie-hash-key='#{oauth2_provider[:cookie_hash_key]}'",
-              "--cookie-block-key=''#{oauth2_provider[:cookie_block_key]}'"
+              "--cookie-block-key='#{oauth2_provider[:cookie_block_key]}'"
             ],
             volumes: [
               '/usr/share/ca-certificates:/etc/ssl/certs:ro'
