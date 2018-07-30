@@ -242,12 +242,14 @@ module Terrafying
         {
           path: "/etc/caddy/Caddyfile",
           mode: "0644",
-          contents: <<EOF
-#{@fqdn}:443
-tls #{tls}
-proxy / localhost:#{port}
-EOF
-      }
+          contents: <<~CADDYFILE
+            #{@fqdn}:443
+            tls #{tls}
+            proxy / localhost:#{port} {
+              transparent
+            }
+          CADDYFILE
+        }
       end
 
       def openvpn_conf
