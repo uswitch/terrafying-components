@@ -20,7 +20,7 @@ module Terrafying
 
     class Service < Terrafying::Context
 
-      attr_reader :name, :domain_names, :ports, :load_balancer, :instance_set
+      attr_reader :name, :domain_names, :ports, :instance_profile, :load_balancer, :instance_set
 
       include Usable
 
@@ -87,7 +87,7 @@ module Terrafying
         depends_on = options[:depends_on] + options[:keypairs].map{ |kp| kp[:resources] }.flatten
 
         iam_statements = options[:iam_policy_statements] + options[:keypairs].map { |kp| kp[:iam_statement] }
-        instance_profile = add! InstanceProfile.create(ident, { statements: iam_statements })
+        @instance_profile = add! InstanceProfile.create(ident, { statements: iam_statements })
 
         tags = options[:tags].merge({ service_name: name })
 
@@ -96,7 +96,7 @@ module Terrafying
         wants_load_balancer = (set == DynamicSet && @ports.count > 0) || options[:loadbalancer]
 
         instance_set_options = {
-          instance_profile: instance_profile,
+          instance_profile: @instance_profile,
           depends_on: depends_on,
           tags: tags,
         }
