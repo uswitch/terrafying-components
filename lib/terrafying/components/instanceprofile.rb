@@ -5,7 +5,7 @@ module Terrafying
 
     class InstanceProfile < Terrafying::Context
 
-      attr_reader :id
+      attr_reader :id, :role_arn
 
       def self.create(name, options={})
         InstanceProfile.new.create name, options
@@ -73,6 +73,8 @@ module Terrafying
                          name: name,
                          role: output_of(:aws_iam_role, name, :name),
                        }
+
+        @role_arn = output_of(:aws_iam_role, name, :arn)
 
         self
       end
