@@ -20,7 +20,7 @@ module Terrafying
 
     class Service < Terrafying::Context
 
-      attr_reader :name, :domain_names, :ports, :load_balancer, :instance_set
+      attr_reader :name, :domain_names, :ports, :instance_profile, :load_balancer, :instance_set
 
       include Usable
 
@@ -87,16 +87,21 @@ module Terrafying
         depends_on = options[:depends_on] + options[:keypairs].map{ |kp| kp[:resources] }.flatten
 
         iam_statements = options[:iam_policy_statements] + options[:keypairs].map { |kp| kp[:iam_statement] }
-        instance_profile = add! InstanceProfile.create(ident, { statements: iam_statements })
+        @instance_profile = add! InstanceProfile.create(ident, { statements: iam_statements })
 
         tags = options[:tags].merge({ service_name: name })
 
         set = options[:instances].is_a?(Hash) ? DynamicSet : StaticSet
 
-        wants_load_balancer = (set == DynamicSet && @ports.count > 0) || options[:loadbalancer]
+        if options.has_key?(:loadbalancer) # explicitly requested or rejected a loadbalancer
+          wants_load_balancer = options[:loadbalancer]
+        else
+          # by default we want one if we are an ASG with exposed ports
+          wants_load_balancer = set == DynamicSet && @ports.count > 0
+        end
 
         instance_set_options = {
-          instance_profile: instance_profile,
+          instance_profile: @instance_profile,
           depends_on: depends_on,
           tags: tags,
         }

@@ -98,7 +98,6 @@ module Terrafying
                          name: ident,
                          load_balancer_type: type,
                          internal: !options[:public],
-                         subnets: options[:subnets].map(&:id),
                          subnet_mapping: options[:subnets].map{ |subnet|
                            {subnet_id: subnet.id}
                          },

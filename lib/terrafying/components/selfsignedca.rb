@@ -86,6 +86,10 @@ module Terrafying
 
         {
           ca: self,
+          path: {
+            cert: File.join("/etc/ssl", @name, "ca.cert"),
+            key: File.join("/etc/ssl", @name, "ca.key"),
+          },
           source: {
             cert: File.join("s3://", @bucket, @prefix, @name, "ca.cert"),
             key: File.join("s3://", @bucket, @prefix, @name, "ca.key"),

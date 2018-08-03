@@ -83,14 +83,14 @@ storage:
     <% keypairs.each { |keypair| %>
     <% if keypair.has_key?(:name) %>
     - filesystem: "root"
-      path: "/etc/ssl/<%= keypair[:ca].name %>/<%= keypair[:name] %>/cert"
+      path: "<%= keypair[:path][:cert] %>"
       mode: 0444
       user: { id: 0 }
       group: { id: 0 }
       contents:
         source: "<%= keypair[:source][:cert] %>"
     - filesystem: "root"
-      path: "/etc/ssl/<%= keypair[:ca].name %>/<%= keypair[:name] %>/key"
+      path: "<%= keypair[:path][:key] %>"
       mode: 0444
       user: { id: 0 }
       group: { id: 0 }
@@ -98,7 +98,7 @@ storage:
         source: "<%= keypair[:source][:key] %>"
     <% else %>
     - filesystem: "root"
-      path: "/etc/ssl/<%= keypair[:ca].name %>/ca.key"
+      path: "<%= keypair[:path][:key] %>"
       mode: 0444
       user: { id: 0 }
       group: { id: 0 }

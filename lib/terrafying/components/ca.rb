@@ -15,6 +15,10 @@ module Terrafying
         ref = {
           name: name,
           ca: self,
+          path: {
+            cert: File.join("/etc/ssl", @name, name, "cert"),
+            key: File.join("/etc/ssl", @name, name, "key"),
+          },
           source: {
             cert: File.join("s3://", @bucket, @prefix, @name, name, "cert"),
             key: File.join("s3://", @bucket, @prefix, @name, name, "key"),
