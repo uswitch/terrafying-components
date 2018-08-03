@@ -93,7 +93,12 @@ module Terrafying
 
         set = options[:instances].is_a?(Hash) ? DynamicSet : StaticSet
 
-        wants_load_balancer = options.has_key?(:loadbalancer) ? options[:loadbalancer] : (set == DynamicSet && @ports.count > 0)
+        if options.has_key?(:loadbalancer) # explicitly requested or rejected a loadbalancer
+          wants_load_balancer = options[:loadbalancer]
+        else
+          # by default we want one if we are an ASG with exposed ports
+          wants_load_balancer = set == DynamicSet && @ports.count > 0
+        end
 
         instance_set_options = {
           instance_profile: @instance_profile,
