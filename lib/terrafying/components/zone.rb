@@ -49,11 +49,19 @@ module Terrafying
 
         ident = tf_safe(fqdn)
 
+        zone_config = {
+          name: fqdn,
+          tags: options[:tags],
+        }
+
+        if options[:vpc]
+          zone_config[:vpc_id] = options[:vpc].id
+
+          ident = tf_safe("#{options[:vpc].id}-#{ident}")
+        end
+
         @fqdn = fqdn
-        @id = resource :aws_route53_zone, ident, {
-                         name: fqdn,
-                         tags: options[:tags],
-                       }
+        @id = resource :aws_route53_zone, ident, zone_config
 
         if options[:parent_zone]
           ns = (0..3).map{ |i| output_of(:aws_route53_zone, ident, "name_servers.#{i}") }
@@ -81,10 +89,10 @@ module Terrafying
           name: qualify(name),
         }.merge(options)
 
-        ctx.resource :aws_route53_record, tf_safe(options[:name]), {
+        ctx.resource :aws_route53_record, options[:resource_name] || tf_safe(options[:name]), {
                    zone_id: @id,
                    records: records,
-                 }.merge(options)
+                 }.merge(options.slice(:type, :ttl, :name, :records, :zone_id, :weight))
       end
 
       def add_alias(name, config)
