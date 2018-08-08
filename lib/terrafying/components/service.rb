@@ -20,7 +20,7 @@ module Terrafying
 
     class Service < Terrafying::Context
 
-      attr_reader :name, :domain_names, :ports, :instance_profile, :load_balancer, :instance_set
+      attr_reader :name, :zone, :domain_names, :ports, :instance_profile, :load_balancer, :instance_set
 
       include Usable
 
@@ -81,6 +81,7 @@ module Terrafying
         ident = "#{tf_safe(vpc.name)}-#{name}"
 
         @name = ident
+        @zone = options[:zone]
         @ports = enrich_ports(options[:ports])
         @domain_names = [ options[:zone].qualify(name) ]
 
@@ -143,7 +144,10 @@ module Terrafying
       end
 
       def with_endpoint_service(options = {})
-        add! EndpointService.create_for(@load_balancer, @name, options)
+        add! EndpointService.create_for(@load_balancer, @name, {
+                                          fqdn: @domain_names[0],
+                                          zone: @zone,
+                                        }.merge(options))
       end
 
     end

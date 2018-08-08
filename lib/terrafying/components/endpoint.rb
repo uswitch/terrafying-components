@@ -10,7 +10,7 @@ module Terrafying
 
     class Endpoint < Terrafying::Context
 
-      attr_reader :security_group
+      attr_reader :fqdn, :security_group
 
       include Usable
 
@@ -27,7 +27,6 @@ module Terrafying
           auto_accept: true,
           subnets: vpc.subnets.fetch(:private, []),
           private_dns: false,
-          dns_name: name,
           tags: {},
         }.merge(options)
 
@@ -84,7 +83,21 @@ module Terrafying
                    private_dns_enabled: options[:private_dns],
                  }
 
-        vpc.zone.add_cname_in(self, options[:dns_name], output_of(:aws_vpc_endpoint, ident, "dns_entry.0.dns_name"))
+        @fqdn = output_of(:aws_vpc_endpoint, ident, "dns_entry.0.dns_name")
+
+        if options[:service]
+          endpoint_service = options[:service]
+
+          record_name = endpoint_service.fqdn.gsub(/.#{endpoint_service.zone.fqdn}$/, "")
+
+          private_zone = add! Zone.create(endpoint_service.zone.fqdn, vpc: vpc)
+          private_zone.add_record(
+            record_name, [@fqdn], type: "CNAME",
+            resource_name: tf_safe("#{@name}-#{endpoint_service.fqdn}"),
+          )
+        else
+
+        end
 
         self
       end

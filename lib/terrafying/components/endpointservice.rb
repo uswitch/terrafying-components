@@ -7,7 +7,7 @@ module Terrafying
 
     class EndpointService < Terrafying::Context
 
-      attr_reader :name, :load_balancer, :service_name
+      attr_reader :name, :load_balancer, :service_name, :fqdn, :zone
 
       def self.create_for(load_balancer, name, options={})
         EndpointService.new.create_for(load_balancer, name, options)
@@ -39,6 +39,9 @@ module Terrafying
 
         @name = name
         @load_balancer = load_balancer
+
+        @fqdn = options[:fqdn]
+        @zone = options[:zone]
 
         resource :aws_vpc_endpoint_service, name, {
                    acceptance_required: options[:acceptance_required],
