@@ -34,6 +34,7 @@ module Terrafying
         @name = name
         @id = vpc.vpc_id
         @cidr = vpc.cidr_block
+        @tags = {}
         @zone = Terrafying::Components::Zone.find_by_tag({vpc: @id})
         if @zone.nil?
           raise "Failed to find zone"
