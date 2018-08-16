@@ -86,4 +86,11 @@ RSpec.describe Terrafying::Components::LoadBalancer do
     expect(sg_rules[0][:cidr_blocks]).to eq(["1.2.3.4/32"])
   end
 
+  it "should have a name with at most 32 characters" do
+    lb = Terrafying::Components::LoadBalancer.create_in(
+      @vpc, "abcdefghijklmnopqrstuvwxyz123456789", {}
+    )
+    expect(lb.name.length).to be <= 32
+  end
+
 end

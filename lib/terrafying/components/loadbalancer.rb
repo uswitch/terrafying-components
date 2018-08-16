@@ -1,4 +1,3 @@
-
 require 'terrafying/components/usable'
 require 'terrafying/generator'
 
@@ -27,14 +26,14 @@ module Terrafying
       end
 
       def find_in(vpc, name)
-        ident = "network-#{tf_safe(vpc.name)}-#{name}"
         @type = "network"
+        ident = make_identifier(@type, vpc.name, name)
 
         begin
           lb = aws.lb_by_name(ident)
         rescue
-          ident = "application-#{tf_safe(vpc.name)}-#{name}"
           @type = "application"
+          ident = make_identifier(@type, vpc.name, name)
 
           lb = aws.lb_by_name(ident)
 
@@ -76,7 +75,7 @@ module Terrafying
 
         @type = l4_ports.count == 0 ? "application" : "network"
 
-        ident = "#{type}-#{tf_safe(vpc.name)}-#{name}"
+        ident = make_identifier(@type, vpc.name, name)
         @name = ident
 
         if @type == "application"
@@ -156,6 +155,10 @@ module Terrafying
         else
           raise "Dont' know how to attach object to LB"
         end
+      end
+
+      def make_identifier(type, vpc_name, name)
+        "#{type}-#{tf_safe(vpc_name)}-#{name}"[0..31]
       end
 
     end
