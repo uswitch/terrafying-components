@@ -158,7 +158,7 @@ module Terrafying
       end
 
       def make_identifier(type, vpc_name, name)
-        "#{type}-#{tf_safe(vpc_name)}-#{name}"[0..31]
+        "#{type[0..2]}-#{tf_safe(vpc_name)}-#{name}"[0..31]
       end
 
     end
