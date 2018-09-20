@@ -3,13 +3,6 @@ FROM ruby:2.5-alpine3.7
 ARG TERRAFYING_VERSION=0.0.0
 ENV TERRAFORM_VERSION=0.11.8
 
-RUN apk --update add --no-cache --virtual .azure-builddeps build-base python2-dev \
- && apk add --no-cache --virtual .azure-rundeps python2 py-setuptools py2-pip bash \
- && pip install --no-cache-dir azure-cli-profile azure-cli-role \
- && pip install --no-cache-dir --no-deps azure-cli \
- && apk del .azure-builddeps \
- && rm -rf /var/cache/apk/*
-
 RUN wget -O terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip \
  && unzip terraform.zip \
  && install -m 755 terraform /usr/bin/terraform \

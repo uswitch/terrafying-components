@@ -122,32 +122,6 @@ module Terrafying
                             ],
                           }.merge(options[:service])
                         )
-
-        if oauth2_provider[:type] == "azure" and oauth2_provider[:register]
-
-          provider :null, {}
-
-          resource :null_resource, "ad-app-configure", {
-                     triggers: {
-                       service_resources: @service.resources.join(","),
-                     },
-                     provisioner: [
-                       {
-                         "local-exec" => {
-                           when: "create",
-                           command: "#{File.expand_path(File.dirname(__FILE__))}/support/register-vpn '#{oauth2_provider[:client_id]}' '#{oauth2_provider[:tenant_id]}' '#{@fqdn}'"
-                         },
-                       },
-                       {
-                         "local-exec" => {
-                           when: "destroy",
-                           command: "#{File.expand_path(File.dirname(__FILE__))}/support/deregister-vpn '#{oauth2_provider[:client_id]}' '#{oauth2_provider[:tenant_id]}' '#{@fqdn}'"
-                         }
-                       },
-                     ],
-                   }
-        end
-
         self
       end
 
