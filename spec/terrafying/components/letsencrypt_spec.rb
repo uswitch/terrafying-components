@@ -3,14 +3,36 @@
 require 'terrafying'
 require 'terrafying/components/letsencrypt'
 
+def providers_matching(ctx, type, name)
+  ctx.output_with_children['provider']
+     .select { |pr| pr.key?(type.to_s) && pr[type.to_s][:alias] == name }
+end
+
+def provider_matching(ctx, type, name)
+  providers_matching(ctx, type, name).first
+end
+
+
 RSpec.describe Terrafying::Components::LetsEncrypt do
   it_behaves_like 'a CA'
 end
 
 RSpec.describe Terrafying::Components::LetsEncrypt, '#create' do
   context 'providers' do
-    it 'sets the server_url based on the provider for staging' do
-      expected_url = Terrafying::Components::LetsEncrypt::PROVIDERS[:staging][:server_url]
+    it 'creates the provider for staging' do
+      ca = Terrafying::Components::LetsEncrypt.create('test-ca', 'test-bucket')
+
+      prov = provider_matching(ca, :acme, :staging)
+
+      expect(prov).to include(
+        'acme' => {
+          alias: :staging,
+          server_url: 'https://acme-staging-v02.api.letsencrypt.org/directory'
+        }
+      )
+    end
+
+    it 'sets the provider for staging' do
       ca = Terrafying::Components::LetsEncrypt.create(
         'test-ca',
         'test-bucket',
@@ -20,11 +42,23 @@ RSpec.describe Terrafying::Components::LetsEncrypt, '#create' do
 
       reg = ca.output_with_children['resource']['acme_registration'].values.first
 
-      expect(reg[:server_url]).to eq(expected_url)
+      expect(reg[:provider]).to eq('acme.staging')
     end
 
-    it 'sets the server_url based on the provider for live' do
-      expected_url = Terrafying::Components::LetsEncrypt::PROVIDERS[:live][:server_url]
+    it 'creates the provider for live' do
+      ca = Terrafying::Components::LetsEncrypt.create('test-ca', 'test-bucket')
+
+      prov = provider_matching(ca, :acme, :live)
+
+      expect(prov).to include(
+        'acme' => {
+          alias: :live,
+          server_url: 'https://acme-v02.api.letsencrypt.org/directory'
+        }
+      )
+    end
+
+    it 'sets the provider for live' do
       ca = Terrafying::Components::LetsEncrypt.create(
         'test-ca',
         'test-bucket',
@@ -34,15 +68,14 @@ RSpec.describe Terrafying::Components::LetsEncrypt, '#create' do
 
       reg = ca.output_with_children['resource']['acme_registration'].values.first
 
-      expect(reg[:server_url]).to eq(expected_url)
+      expect(reg[:provider]).to eq('acme.live')
     end
   end
 end
 
 RSpec.describe Terrafying::Components::LetsEncrypt, '#create_keypair' do
   context 'keypairs' do
-    it 'sets the server_url based on the provider for staging' do
-      expected_url = Terrafying::Components::LetsEncrypt::PROVIDERS[:staging][:server_url]
+    it 'sets the provider for staging' do
       ca = Terrafying::Components::LetsEncrypt.create(
         'test-ca',
         'test-bucket',
@@ -54,7 +87,7 @@ RSpec.describe Terrafying::Components::LetsEncrypt, '#create_keypair' do
 
       cert = ca.output_with_children['resource']['acme_certificate'].values.first
 
-      expect(cert[:server_url]).to eq(expected_url)
+      expect(cert[:provider]).to eq('acme.staging')
     end
   end
 end

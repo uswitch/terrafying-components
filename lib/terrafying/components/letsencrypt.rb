@@ -1,25 +1,13 @@
+# frozen_string_literal: true
 
 require 'terrafying/components/ca'
 require 'terrafying/generator'
 require 'open-uri'
 module Terrafying
-
   module Components
-
     class LetsEncrypt < Terrafying::Context
 
       attr_reader :name, :source
-
-      PROVIDERS = {
-        staging: {
-          server_url: 'https://acme-staging.api.letsencrypt.org/directory',
-          ca_cert:    'https://letsencrypt.org/certs/fakeleintermediatex1.pem'
-        },
-        live:    {
-          server_url: 'https://acme-v01.api.letsencrypt.org/directory',
-          ca_cert:    'https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt'
-        }
-      }.freeze
 
       include CA
 
@@ -27,8 +15,22 @@ module Terrafying
         LetsEncrypt.new.create name, bucket, options
       end
 
-      def initialize()
+      def initialize
         super
+        @acme_providers = setup_providers
+      end
+
+      def setup_providers
+        {
+          staging: {
+            ref: provider(:acme, alias: :staging, server_url: 'https://acme-staging-v02.api.letsencrypt.org/directory'),
+            ca_cert: 'https://letsencrypt.org/certs/fakeleintermediatex1.pem'
+          },
+          live: {
+            ref: provider(:acme, alias: :live, server_url: 'https://acme-v02.api.letsencrypt.org/directory'),
+            ca_cert: 'https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt'
+          }
+        }
       end
 
       def create(name, bucket, options={})
@@ -42,9 +44,8 @@ module Terrafying
         @name = name
         @bucket = bucket
         @prefix = options[:prefix]
-        @provider = PROVIDERS[options[:provider].to_sym]
+        @acme_provider = @acme_providers[options[:provider]]
 
-        provider :acme, {}
         provider :tls, {}
 
         resource :tls_private_key, "#{@name}-account", {
@@ -52,31 +53,31 @@ module Terrafying
                    ecdsa_curve: "P384",
                  }
 
-        @account_key = output_of(:tls_private_key, "#{@name}-account", "private_key_pem")
+        resource :acme_registration, "#{@name}-reg", {
+          provider: @acme_provider[:ref],
+          account_key_pem: output_of(:tls_private_key, "#{@name}-account", "private_key_pem"),
+          email_address: options[:email_address],
+        }
 
-        @registration_url = resource :acme_registration, "#{@name}-reg", {
-                                       server_url: @provider[:server_url],
-                                       account_key_pem: @account_key,
-                                       email_address: options[:email_address],
-                                     }
+        @account_key = output_of(:acme_registration, "#{@name}-reg", 'account_key_pem')
 
         resource :aws_s3_bucket_object, "#{@name}-account", {
-                   bucket: @bucket,
-                   key: File.join(@prefix, @name, "account.key"),
-                   content: @account_key,
-                 }
+          bucket: @bucket,
+          key: File.join(@prefix, @name, "account.key"),
+          content: @account_key,
+        }
 
         @ca_cert_acl = options[:public_certificate] ? 'public-read' : 'private'
 
-        open(@provider[:ca_cert], 'rb') do |cert|
+        open(@acme_provider[:ca_cert], 'rb') do |cert|
           @ca_cert = cert.read
         end
 
         resource :aws_s3_bucket_object, "#{@name}-cert", {
-            bucket: @bucket,
-            key: File.join(@prefix, @name, "ca.cert"),
-            content: @ca_cert,
-            acl: @ca_cert_acl
+          bucket: @bucket,
+          key: File.join(@prefix, @name, "ca.cert"),
+          content: @ca_cert,
+          acl: @ca_cert_acl
         }
 
         @source = File.join("s3://", @bucket, @prefix, @name, "ca.cert")
@@ -118,9 +119,8 @@ module Terrafying
                      }
 
         ctx.resource :acme_certificate, key_ident, {
-                       server_url: @provider[:server_url],
+                       provider: @acme_provider[:ref],
                        account_key_pem: @account_key,
-                       registration_url: @registration_url,
                        min_days_remaining: options[:min_days_remaining],
                        dns_challenge: {
                          provider: "route53",
