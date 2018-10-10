@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
+require 'digest'
 require 'terrafying'
 require 'terrafying/components/instance'
 require 'terrafying/components/loadbalancer'
 require 'terrafying/components/staticset'
-
 
 RSpec.describe Terrafying::Components::LoadBalancer do
 
@@ -91,6 +93,17 @@ RSpec.describe Terrafying::Components::LoadBalancer do
       @vpc, "abcdefghijklmnopqrstuvwxyz123456789", {}
     )
     expect(lb.name.length).to be <= 32
+  end
+
+  it 'should use hex identifiers when requested' do
+    name = 'abcdefghijklmnopqrstuvwxyz123456789'
+    expected_hex = Digest::SHA2.hexdigest("application-#{@vpc.name}-#{name}")[0..24]
+
+    lb = Terrafying::Components::LoadBalancer.create_in(
+      @vpc, name, hex_ident: true
+    )
+
+    expect(lb.name).to eq(expected_hex)
   end
 
 end

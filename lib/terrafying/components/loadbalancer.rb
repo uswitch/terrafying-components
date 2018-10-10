@@ -1,3 +1,4 @@
+require 'digest'
 require 'terrafying/components/usable'
 require 'terrafying/generator'
 
@@ -62,9 +63,13 @@ module Terrafying
           ports: [],
           public: false,
           subnets: vpc.subnets.fetch(:private, []),
-          tags: {},
+          tags: {
+            Name: name
+          },
+          hex_ident: false
         }.merge(options)
 
+        @hex_ident = options[:hex_ident]
         @ports = enrich_ports(options[:ports])
 
         l4_ports = @ports.select{ |p| is_l4_port(p) }
@@ -158,7 +163,9 @@ module Terrafying
       end
 
       def make_identifier(type, vpc_name, name)
-        "#{type}-#{tf_safe(vpc_name)}-#{name}"[0..31]
+        gen_id = "#{type}-#{tf_safe(vpc_name)}-#{name}"
+        return Digest::SHA2.hexdigest(gen_id)[0..24] if @hex_ident || gen_id.size > 26
+        gen_id[0..31]
       end
 
     end
