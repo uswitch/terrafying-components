@@ -83,7 +83,7 @@ module Terrafying
         ident = make_identifier(@type, vpc.name, name)
         @name = ident
 
-        if @type == "application"
+        if application?
           @security_group = resource :aws_security_group, ident, {
                                        name: "loadbalancer-#{ident}",
                                        description: "Describe the ingress and egress of the load balancer #{ident}",
@@ -99,14 +99,12 @@ module Terrafying
         end
 
         @id = resource :aws_lb, ident, {
-                         name: ident,
-                         load_balancer_type: type,
-                         internal: !options[:public],
-                         subnet_mapping: options[:subnets].map{ |subnet|
-                           {subnet_id: subnet.id}
-                         },
-                         tags: options[:tags],
-                       }.merge(@type == "application" ? { security_groups: [@security_group] } : {})
+          name: ident,
+          load_balancer_type: type,
+          internal: !options[:public],
+          tags: options[:tags],
+        }.merge(subnets_for(options[:subnets]))
+         .merge(application? ? { security_groups: [@security_group] } : {})
 
         @target_groups = []
 
@@ -150,16 +148,23 @@ module Terrafying
         self
       end
 
-      def attach(set)
-        if set.respond_to?(:attach_load_balancer)
-          set.attach_load_balancer(self)
+      def application?
+        @type == 'application'
+      end
 
-          if @type == "network"
-            @security_group = set.ingress_security_group
-          end
-        else
-          raise "Dont' know how to attach object to LB"
-        end
+      def subnets_for(subnets)
+        return { subnets: subnets.map(&:id) } if application?
+        { subnet_mapping: subnets.map { |subnet| { subnet_id: subnet.id } } }
+      end
+
+      def network?
+        @type == 'network'
+      end
+
+      def attach(set)
+        raise "Dont' know how to attach object to LB" unless set.respond_to?(:attach_load_balancer)
+        set.attach_load_balancer(self)
+        @security_group = set.ingress_security_group if network?
       end
 
       def make_identifier(type, vpc_name, name)
@@ -167,9 +172,6 @@ module Terrafying
         return Digest::SHA2.hexdigest(gen_id)[0..24] if @hex_ident || gen_id.size > 26
         gen_id[0..31]
       end
-
     end
-
   end
-
 end

@@ -106,4 +106,39 @@ RSpec.describe Terrafying::Components::LoadBalancer do
     expect(lb.name).to eq(expected_hex)
   end
 
+  context('application load balancer') do
+    it('should use subnets to specify the list of subnets') do
+      lb = Terrafying::Components::LoadBalancer.create_in(
+        @vpc, 'test-alb', ports: [{ type: 'https', number: 443, ssl_certificate: 'some-arn' }]
+      )
+
+      lb_resource = lb.output_with_children['resource']['aws_lb'].values.first
+
+      expect(lb_resource).to include(
+        subnets: a_collection_including(
+          '${aws_subnet.a-vpc-private-eu-west-1a.id}',
+          '${aws_subnet.a-vpc-private-eu-west-1b.id}',
+          '${aws_subnet.a-vpc-private-eu-west-1c.id}'
+        )
+      )
+    end
+  end
+
+  context('network load balancer') do
+    it('should use subnet_mapping to specify the list of subnets') do
+      lb = Terrafying::Components::LoadBalancer.create_in(
+        @vpc, 'test-alb', ports: [{ type: 'tcp', number: 22 }]
+      )
+
+      lb_resource = lb.output_with_children['resource']['aws_lb'].values.first
+
+      expect(lb_resource).to include(
+        subnet_mapping: a_collection_including(
+          { subnet_id: '${aws_subnet.a-vpc-private-eu-west-1a.id}' },
+          { subnet_id: '${aws_subnet.a-vpc-private-eu-west-1b.id}' },
+          { subnet_id: '${aws_subnet.a-vpc-private-eu-west-1c.id}' }
+        )
+      )
+    end
+  end
 end
