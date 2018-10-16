@@ -124,13 +124,11 @@ module Terrafying
       end
 
       def profile_from(profile)
-        profile.id if profile.respond_to? :id
-        profile
+        profile.respond_to?(:id) ? profile.id : profile
       end
 
       def resources_from(profile)
-        profile.resource_names if profile.respond_to? :resource_names
-        []
+        profile.respond_to?(:resource_names) ? profile.resource_names : []
       end
 
       def attach_load_balancer(load_balancer)
