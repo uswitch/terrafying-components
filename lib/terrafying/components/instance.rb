@@ -84,7 +84,7 @@ module Terrafying
         @id = resource :aws_instance, ident, {
                          ami: options[:ami],
                          instance_type: options[:instance_type],
-                         iam_instance_profile: options[:instance_profile] && options[:instance_profile].id,
+                         iam_instance_profile: profile_from(options[:instance_profile]),
                          subnet_id: @subnet.id,
                          associate_public_ip_address: options[:public],
                          root_block_device: {
@@ -109,6 +109,9 @@ module Terrafying
         self
       end
 
+      def profile_from(profile)
+        profile.respond_to?(:id) ? profile.id : profile
+      end
     end
   end
 end
