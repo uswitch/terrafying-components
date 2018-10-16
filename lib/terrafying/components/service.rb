@@ -86,9 +86,12 @@ module Terrafying
         @domain_names = [ options[:zone].qualify(name) ]
 
         depends_on = options[:depends_on] + options[:keypairs].map{ |kp| kp[:resources] }.flatten
-
-        iam_statements = options[:iam_policy_statements] + options[:keypairs].map { |kp| kp[:iam_statement] }
-        @instance_profile = add! InstanceProfile.create(ident, { statements: iam_statements })
+        if options.key? :instance_profile
+          @instance_profile = options[:instance_profile]
+        else
+          iam_statements = options[:iam_policy_statements] + options[:keypairs].map { |kp| kp[:iam_statement] }
+          @instance_profile = add! InstanceProfile.create(ident, { statements: iam_statements })
+        end
 
         tags = options[:tags].merge({ service_name: name })
 
