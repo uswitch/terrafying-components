@@ -371,6 +371,24 @@ RSpec.describe Terrafying::Components::Service do
       expect(binding_rules.count).to eq(service.ports.count)
     end
 
-  end
+    context('instance profiles') do
+      it 'should use the specified instance profile' do
+        service = Terrafying::Components::Service.create_in(@vpc, 'foo', instance_profile: 'magical-instance-profile')
 
+        ec2_instance = service.output_with_children['resource']['aws_instance'].values.first
+        expect(ec2_instance).to include(
+          iam_instance_profile: 'magical-instance-profile'
+        )
+      end
+
+      it 'should use the specified instance profile for ASGs' do
+        service = Terrafying::Components::Service.create_in(@vpc, 'foo', instances: { min: 1, max: 1, desired: 1, tags: {} }, instance_profile: 'magical-instance-profile')
+
+        launch_config = service.output_with_children['resource']['aws_launch_configuration'].values.first
+        expect(launch_config).to include(
+          iam_instance_profile: 'magical-instance-profile'
+        )
+      end
+    end
+  end
 end

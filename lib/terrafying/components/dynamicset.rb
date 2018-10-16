@@ -74,7 +74,7 @@ module Terrafying
                                    image_id: options[:ami],
                                    instance_type: options[:instance_type],
                                    user_data: options[:user_data],
-                                   iam_instance_profile: options[:instance_profile] && options[:instance_profile].id,
+                                   iam_instance_profile: profile_from(options[:instance_profile]),
                                    associate_public_ip_address: options[:public],
                                    root_block_device: {
                                      volume_type: 'gp2',
@@ -87,7 +87,7 @@ module Terrafying
                                    lifecycle: {
                                      create_before_destroy: true,
                                    },
-                                   depends_on: options[:instance_profile] ? options[:instance_profile].resource_names : [],
+                                   depends_on: resources_from(options[:instance_profile]),
                                  }
 
         if options[:instances][:track]
@@ -121,6 +121,14 @@ module Terrafying
         @asg = output_of(:aws_cloudformation_stack, ident, 'outputs["AsgName"]')
 
         self
+      end
+
+      def profile_from(profile)
+        profile.respond_to?(:id) ? profile.id : profile
+      end
+
+      def resources_from(profile)
+        profile.respond_to?(:resource_names) ? profile.resource_names : []
       end
 
       def attach_load_balancer(load_balancer)
