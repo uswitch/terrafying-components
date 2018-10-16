@@ -109,12 +109,9 @@ module Terrafying
         self
       end
 
-
       def profile_from(profile)
-        profile.id if profile.respond_to? :id
-        profile
+        profile.respond_to?(:id) ? profile.id : profile
       end
-
     end
   end
 end
