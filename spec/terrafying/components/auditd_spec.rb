@@ -93,6 +93,16 @@ RSpec.describe Terrafying::Components::Auditd, '#fluentd_conf' do
       conf = Terrafying::Components::Auditd.fluentd_conf 'a-role'
       expect(conf[:files]).to include(a_tag_matching('account_id', 'account_id'))
     end
+
+    it('should add a custom tag with a string key') do
+      conf = Terrafying::Components::Auditd.fluentd_conf 'a-role', ['custom']
+      expect(conf[:files]).to include(a_tag_matching('custom', 'tagset_custom'))
+    end
+
+    it('should add a custom tag with a symbol key') do
+      conf = Terrafying::Components::Auditd.fluentd_conf 'a-role', [:custom]
+      expect(conf[:files]).to include(a_tag_matching('custom', 'tagset_custom'))
+    end
   end
 
   context('custom ec2 metadata tags') do

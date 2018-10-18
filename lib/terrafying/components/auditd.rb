@@ -30,7 +30,7 @@ module Terrafying
       end
 
       def wrap_tag(t)
-        t = "tagset_#{t}" unless t.start_with? 'tagset_'
+        t = "tagset_#{t}" unless t.to_s.start_with? 'tagset_'
         t.downcase
       end
 
