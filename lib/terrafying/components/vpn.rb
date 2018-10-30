@@ -161,6 +161,7 @@ module Terrafying
             arguments: optional_arguments + [
               "--fqdn #{@fqdn}",
               "--cache /var/openvpn-authz",
+              '--user-header "X-Forwarded-Email"',
               "/etc/ssl/openvpn",
             ],
           }
