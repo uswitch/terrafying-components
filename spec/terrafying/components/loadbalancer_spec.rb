@@ -122,6 +122,46 @@ RSpec.describe Terrafying::Components::LoadBalancer do
         )
       )
     end
+
+    context('ssl certificates') do
+      it('should use the first cert passed as a string') do
+        lb = Terrafying::Components::LoadBalancer.create_in(
+          @vpc, 'test-alb', ports: [{ type: 'https', number: 443, ssl_certificate: 'some-arn' }]
+        )
+
+        listener = lb.output_with_children['resource']['aws_lb_listener'].values.first
+
+        expect(listener).to include(
+          certificate_arn: 'some-arn'
+        )
+      end
+
+      it('should use the first cert passed as an array') do
+        lb = Terrafying::Components::LoadBalancer.create_in(
+          @vpc, 'test-alb', ports: [{ type: 'https', number: 443, ssl_certificate: ['some-arn'] }]
+        )
+
+        listener = lb.output_with_children['resource']['aws_lb_listener'].values.first
+
+        expect(listener).to include(
+          certificate_arn: 'some-arn'
+        )
+      end
+
+      it('should create certificate listener resources for additional certs') do
+        lb = Terrafying::Components::LoadBalancer.create_in(
+          @vpc, 'test-alb', ports: [{ type: 'https', number: 443, ssl_certificate: ['test-1', 'test-2', 'test-3'] }]
+        )
+
+        listener_certificates = lb.output_with_children['resource']['aws_lb_listener_certificate'].values
+
+        expect(listener_certificates).to include(
+          a_hash_including(certificate_arn: 'test-2'),
+          a_hash_including(certificate_arn: 'test-3')
+        )
+      end
+    end
+
   end
 
   context('network load balancer') do

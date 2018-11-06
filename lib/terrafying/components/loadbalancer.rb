@@ -63,11 +63,13 @@ module Terrafying
           ports: [],
           public: false,
           subnets: vpc.subnets.fetch(:private, []),
-          tags: {
-            Name: name
-          },
-          hex_ident: false
+          hex_ident: false,
+          tags: {}
         }.merge(options)
+
+        @tags = {
+          Name: name
+        }.merge(options[:tags])
 
         @hex_ident = options[:hex_ident]
         @ports = enrich_ports(options[:ports])
@@ -87,7 +89,7 @@ module Terrafying
           @security_group = resource :aws_security_group, ident, {
                                        name: "loadbalancer-#{ident}",
                                        description: "Describe the ingress and egress of the load balancer #{ident}",
-                                       tags: options[:tags].merge(
+                                       tags: @tags.merge(
                                          {
                                            loadbalancer_name: ident,
                                          }
@@ -102,7 +104,7 @@ module Terrafying
           name: ident,
           load_balancer_type: type,
           internal: !options[:public],
-          tags: options[:tags],
+          tags: @tags,
         }.merge(subnets_for(options[:subnets]))
          .merge(application? ? { security_groups: [@security_group] } : {})
 
@@ -118,13 +120,7 @@ module Terrafying
                                     vpc_id: vpc.id,
                                   }.merge(port.has_key?(:health_check) ? { health_check: port[:health_check] }: {})
 
-          ssl_options = {}
-          if port.has_key?(:ssl_certificate)
-            ssl_options = {
-              ssl_policy: "ELBSecurityPolicy-2015-05",
-              certificate_arn: port[:ssl_certificate],
-            }
-          end
+          ssl_options = alb_certs(port, port_ident)
 
           resource :aws_lb_listener, port_ident, {
                      load_balancer_arn: @id,
@@ -146,6 +142,28 @@ module Terrafying
         }
 
         self
+      end
+
+      def alb_certs(port, port_ident)
+        return {} unless port.key? :ssl_certificate
+
+        certs = Array(port[:ssl_certificate])
+        default_cert = certs.shift
+        certs.map { |cert| alb_cert(cert, port_ident) }
+
+        {
+          ssl_policy: 'ELBSecurityPolicy-2016-08',
+          certificate_arn: default_cert
+        }
+      end
+
+      def alb_cert(cert_arn, port_ident)
+        cert_ident = "#{port_ident}-#{Digest::SHA2.hexdigest(cert_arn)[0..8]}"
+
+        resource :aws_lb_listener_certificate, cert_ident, {
+          listener_arn:    "${aws_lb_listener.#{port_ident}.arn}",
+          certificate_arn: cert_arn
+        }
       end
 
       def application?
