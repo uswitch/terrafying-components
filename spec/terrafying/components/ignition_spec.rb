@@ -6,6 +6,13 @@ require 'terrafying/util'
 
 
 RSpec.describe Terrafying::Components::Ignition, '#container_unit' do
+  before do
+    @aws = double('AWS')
+    allow(@aws).to receive(:region).and_return('eu-west-1')
+    allow_any_instance_of(Terrafying::Context).to receive(:aws).and_return(@aws)
+  end
+
+
   it 'creates a unit file' do
     container_unit = Terrafying::Components::Ignition.container_unit("app", "app:latest")
 
@@ -69,6 +76,12 @@ RSpec.describe Terrafying::Components::Ignition, '#container_unit' do
 end
 
 RSpec.describe Terrafying::Components::Ignition, '#generate' do
+  before do
+    @aws = double('AWS')
+    allow(@aws).to receive(:region).and_return('eu-west-1')
+    allow_any_instance_of(Terrafying::Context).to receive(:aws).and_return(@aws)
+  end
+
   context 'with volumes' do
     it 'creates userdata with correct mountpoints' do
       options = {
