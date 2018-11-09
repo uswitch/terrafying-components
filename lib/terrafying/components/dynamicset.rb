@@ -131,15 +131,42 @@ module Terrafying
         profile.respond_to?(:resource_names) ? profile.resource_names : []
       end
 
-      def attach_load_balancer(load_balancer)
+      def attach_load_balancer(load_balancer, scaling_opts: nil)
         load_balancer.target_groups.each.with_index { |target_group, i|
-          resource :aws_autoscaling_attachment, "#{load_balancer.name}-#{@name}-#{i}", {
+          attach_ident = "#{load_balancer.name}-#{@name}-#{i}"
+          resource :aws_autoscaling_attachment, attach_ident, {
                      autoscaling_group_name: @asg,
                      alb_target_group_arn: target_group
                    }
+
+          if scaling_opts
+            autoscaling_policy(
+              scaling_opts,
+              attach_ident,
+              load_balancer.id.to_s.gsub(/id/, 'arn_suffix'),
+              target_group.to_s.gsub(/id/, 'arn_suffix')
+            )
+          end
         }
 
         self.used_by(load_balancer) if load_balancer.type == "application"
+      end
+
+      def autoscaling_policy(scaling_opts, policy_name, load_balancer, target_group)
+        resource :aws_autoscaling_policy, policy_name, {
+          name: policy_name,
+          autoscaling_group_name: @asg,
+          adjustment_type: 'ChangeInCapacity',
+          policy_type: 'TargetTrackingScaling',
+          target_tracking_configuration: {
+            predefined_metric_specification: {
+              predefined_metric_type: 'ALBRequestCountPerTarget',
+              resource_label: "#{load_balancer}/#{target_group}"
+            },
+            target_value: scaling_opts[:target_value],
+            disable_scale_in: false
+          }
+        }
       end
 
       def generate_template(health_check, instances, launch_config, subnets,tags, rolling_update)
