@@ -142,6 +142,29 @@ module Terrafying
         self.used_by(load_balancer) if load_balancer.type == "application"
       end
 
+      def autoscale_on_load_balancer(load_balancer, target_value:, disable_scale_in:)
+        load_balancer.target_groups.each.with_index { |target_group, i|
+          policy_name = "#{load_balancer.name}-#{@name}-#{i}"
+          lb_arn = load_balancer.id.to_s.gsub(/id/, 'arn_suffix')
+          tg_arn = target_group.to_s.gsub(/id/, 'arn_suffix')
+
+          resource :aws_autoscaling_policy, policy_name, {
+            name: policy_name,
+            autoscaling_group_name: @asg,
+            adjustment_type: 'ChangeInCapacity',
+            policy_type: 'TargetTrackingScaling',
+            target_tracking_configuration: {
+              predefined_metric_specification: {
+                predefined_metric_type: 'ALBRequestCountPerTarget',
+                resource_label: "#{lb_arn}/#{tg_arn}"
+              },
+              target_value: target_value,
+              disable_scale_in: disable_scale_in
+            }
+          }
+        }
+      end
+
       def generate_template(health_check, instances, launch_config, subnets,tags, rolling_update)
         template = {
           Resources: {
@@ -152,7 +175,6 @@ module Terrafying
                 HealthCheckType: "#{health_check[:type]}",
                 HealthCheckGracePeriod: health_check[:grace_period],
                 LaunchConfigurationName: "#{launch_config}",
-                MaxSize: "#{instances[:max]}",
                 MetricsCollection: [
                   {
                     Granularity: "1Minute",
@@ -168,14 +190,15 @@ module Terrafying
                     ]
                   },
                 ],
-                MinSize: "#{instances[:min]}",
-                DesiredCapacity: "#{instances[:desired]}",
+                MaxSize: instances[:max].to_s,
+                MinSize: instances[:min].to_s,
+                DesiredCapacity: instances[:desired] ? instances[:desired].to_s : nil,
                 Tags: tags,
                 TerminationPolicies: [
                   "Default"
                 ],
                 VPCZoneIdentifier: subnets
-              }
+              }.compact
             }
           },
           Outputs: {

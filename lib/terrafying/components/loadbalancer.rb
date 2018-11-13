@@ -185,6 +185,11 @@ module Terrafying
         @security_group = set.ingress_security_group if network?
       end
 
+      def autoscale(set, target_value:, disable_scale_in:)
+        raise "Dont' know how to attach object to LB" unless set.respond_to?(:autoscale_on_load_balancer)
+        set.autoscale_on_load_balancer(self, target_value: target_value, disable_scale_in: disable_scale_in)
+      end
+
       def make_identifier(type, vpc_name, name)
         gen_id = "#{type}-#{tf_safe(vpc_name)}-#{name}"
         return Digest::SHA2.hexdigest(gen_id)[0..24] if @hex_ident || gen_id.size > 26
