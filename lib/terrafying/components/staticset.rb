@@ -135,7 +135,7 @@ module Terrafying
         }
       end
 
-      def attach_load_balancer(load_balancer, scaling_opts: nil)
+      def attach_load_balancer(load_balancer)
         @instances.product(load_balancer.target_groups).each.with_index { |(instance, target_group), i|
           resource :aws_lb_target_group_attachment, "#{load_balancer.name}-#{@name}-#{i}", {
                      target_group_arn: target_group,

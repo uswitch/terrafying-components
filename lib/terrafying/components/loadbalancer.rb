@@ -179,10 +179,15 @@ module Terrafying
         @type == 'network'
       end
 
-      def attach(set, scaling_opts: nil)
+      def attach(set)
         raise "Dont' know how to attach object to LB" unless set.respond_to?(:attach_load_balancer)
-        set.attach_load_balancer(self, scaling_opts: scaling_opts)
+        set.attach_load_balancer(self)
         @security_group = set.ingress_security_group if network?
+      end
+
+      def autoscale(set, target_value:, disable_scale_in:)
+        raise "Dont' know how to attach object to LB" unless set.respond_to?(:autoscale_on_load_balancer)
+        set.autoscale_on_load_balancer(self, target_value: target_value, disable_scale_in: disable_scale_in)
       end
 
       def make_identifier(type, vpc_name, name)
