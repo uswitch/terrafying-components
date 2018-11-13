@@ -133,8 +133,7 @@ module Terrafying
 
       def attach_load_balancer(load_balancer)
         load_balancer.target_groups.each.with_index { |target_group, i|
-          attach_ident = "#{load_balancer.name}-#{@name}-#{i}"
-          resource :aws_autoscaling_attachment, attach_ident, {
+          resource :aws_autoscaling_attachment, "#{load_balancer.name}-#{@name}-#{i}", {
                      autoscaling_group_name: @asg,
                      alb_target_group_arn: target_group
                    }
@@ -176,7 +175,6 @@ module Terrafying
                 HealthCheckType: "#{health_check[:type]}",
                 HealthCheckGracePeriod: health_check[:grace_period],
                 LaunchConfigurationName: "#{launch_config}",
-                MaxSize: "#{instances[:max]}",
                 MetricsCollection: [
                   {
                     Granularity: "1Minute",
@@ -192,14 +190,15 @@ module Terrafying
                     ]
                   },
                 ],
-                MinSize: "#{instances[:min]}",
-                DesiredCapacity: "#{instances[:desired]}",
+                MaxSize: instances[:max].to_s,
+                MinSize: instances[:min].to_s,
+                DesiredCapacity: instances[:desired] ? instances[:desired].to_s : nil,
                 Tags: tags,
                 TerminationPolicies: [
                   "Default"
                 ],
                 VPCZoneIdentifier: subnets
-              }
+              }.compact
             }
           },
           Outputs: {
