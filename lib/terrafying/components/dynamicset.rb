@@ -132,10 +132,10 @@ module Terrafying
       end
 
       def attach_load_balancer(load_balancer)
-        load_balancer.target_groups.each.with_index { |target_group, i|
+        load_balancer.targets.each.with_index { |target, i|
           resource :aws_autoscaling_attachment, "#{load_balancer.name}-#{@name}-#{i}", {
                      autoscaling_group_name: @asg,
-                     alb_target_group_arn: target_group
+                     alb_target_group_arn: target.target_group
                    }
         }
 
@@ -146,8 +146,8 @@ module Terrafying
         load_balancer.targets.each.with_index do |target, i|
           policy_name = "#{load_balancer.name}-#{@name}-#{i}"
           lb_arn = load_balancer.id.to_s.gsub(/id/, 'arn_suffix')
-          tg_arn = target[:target_group].to_s.gsub(/id/, 'arn_suffix')
-          listener = target[:listener].to_s.gsub(/\.id/, '')
+          tg_arn = target.target_group.to_s.gsub(/id/, 'arn_suffix')
+          listener = target.listener.to_s.gsub(/\.id/, '')
 
           resource :aws_autoscaling_policy, policy_name, {
             name: policy_name,
