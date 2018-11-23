@@ -147,7 +147,7 @@ module Terrafying
           policy_name = "#{load_balancer.name}-#{@name}-#{i}"
           lb_arn = load_balancer.id.to_s.gsub(/id/, 'arn_suffix')
           tg_arn = target.target_group.to_s.gsub(/id/, 'arn_suffix')
-          listener = target.listener.to_s.gsub(/\.id/, '')
+          listener = "aws_lb_listener.#{target.listener.to_s.split('.')[1]}"
 
           resource :aws_autoscaling_policy, policy_name, {
             name: policy_name,
