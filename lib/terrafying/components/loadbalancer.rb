@@ -5,12 +5,12 @@ require 'terrafying/generator'
 require_relative './ports'
 
 module Terrafying
-
   module Components
-
     class LoadBalancer < Terrafying::Context
 
-      attr_reader :id, :name, :type, :security_group, :ports, :target_groups, :alias_config
+      attr_reader :id, :name, :type, :security_group, :ports, :targets, :alias_config
+
+      Struct.new('Target', :target_group, :listener, keyword_init: true)
 
       include Usable
 
@@ -46,7 +46,13 @@ module Terrafying
 
         target_groups = aws.target_groups_by_lb(@id)
 
-        @target_groups = target_groups.map(&:target_group_arn)
+        @targets = target_groups.map { |tg|
+          Struct::Target.new(
+            target_group: tg.target_group_arn,
+            listener: nil
+          )
+        }
+
         @ports = enrich_ports(target_groups.map(&:port).sort.uniq)
 
         @alias_config = {
@@ -108,7 +114,7 @@ module Terrafying
         }.merge(subnets_for(options[:subnets]))
          .merge(application? ? { security_groups: [@security_group] } : {})
 
-        @target_groups = []
+        @targets = []
 
         @ports.each { |port|
           port_ident = "#{ident}-#{port[:downstream_port]}"
@@ -122,7 +128,7 @@ module Terrafying
 
           ssl_options = alb_certs(port, port_ident)
 
-          resource :aws_lb_listener, port_ident, {
+          listener = resource :aws_lb_listener, port_ident, {
                      load_balancer_arn: @id,
                      port: port[:upstream_port],
                      protocol: port[:type].upcase,
@@ -132,7 +138,10 @@ module Terrafying
                      },
                    }.merge(ssl_options)
 
-          @target_groups << target_group
+          @targets << Struct::Target.new(
+            target_group: target_group,
+            listener: listener
+          )
         }
 
         @alias_config = {

@@ -2,6 +2,8 @@ require 'base64'
 require 'terrafying'
 require 'terrafying/components/service'
 
+RSpec::Matchers.define_negated_matcher :not_include, :include
+
 RSpec.describe Terrafying::Components::Service do
 
   it_behaves_like "a usable resource"
@@ -345,30 +347,41 @@ RSpec.describe Terrafying::Components::Service do
     end
 
     it "shouldn't use ALB as egress security group when binding services" do
-      service = Terrafying::Components::Service.create_in(
-        @vpc, "foo", {
+      service_a = Terrafying::Components::Service.create_in(
+        @vpc, "foo-a", {
           instances: { min: 1, max: 1, desired: 1, tags: {} },
           ports: [{ type: "https", number: 443 }],
         }
       )
 
       service_b = Terrafying::Components::Service.create_in(
-        @vpc, "foo", {
+        @vpc, "foo-b", {
           instances: { min: 1, max: 1, desired: 1, tags: {} },
           ports: [{ type: "https", number: 443 }],
         }
       )
 
-      service.used_by(service_b)
+      service_a.used_by(service_b)
 
-      output = service.output_with_children
+      rules = service_a.output_with_children['resource']['aws_security_group_rule'].values
 
-      binding_rules = output["resource"].fetch("aws_security_group_rule", {}).values.select { |r|
-        r[:security_group_id] == service_b.load_balancer.ingress_security_group && \
-        r[:source_security_group_id] == service.instance_set.egress_security_group
-      }
+      expect(rules).to include(
+        a_hash_including(
+          from_port: 443,
+          type: 'ingress',
+          security_group_id: service_a.load_balancer.ingress_security_group,
+          source_security_group_id: service_b.instance_set.egress_security_group
+        )
+      )
 
-      expect(binding_rules.count).to eq(service.ports.count)
+      expect(rules).to not_include(
+        a_hash_including(
+          from_port: 443,
+          type: 'ingress',
+          security_group_id: service_a.load_balancer.ingress_security_group,
+          source_security_group_id: service_b.load_balancer.egress_security_group
+        )
+      )
     end
 
     context('instance profiles') do
