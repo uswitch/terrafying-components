@@ -143,10 +143,11 @@ module Terrafying
       end
 
       def autoscale_on_load_balancer(load_balancer, target_value:, disable_scale_in:)
-        load_balancer.target_groups.each.with_index { |target_group, i|
+        load_balancer.target_groups.each.with_index do |target_group, i|
           policy_name = "#{load_balancer.name}-#{@name}-#{i}"
           lb_arn = load_balancer.id.to_s.gsub(/id/, 'arn_suffix')
           tg_arn = target_group.to_s.gsub(/id/, 'arn_suffix')
+          listener = "${aws_lb_listener.#{target_group.to_s.split('.')[1]}}"
 
           resource :aws_autoscaling_policy, policy_name, {
             name: policy_name,
@@ -160,9 +161,10 @@ module Terrafying
               },
               target_value: target_value,
               disable_scale_in: disable_scale_in
-            }
+            },
+            depends_on: [listener]
           }
-        }
+        end
       end
 
       def generate_template(health_check, instances, launch_config, subnets,tags, rolling_update)
