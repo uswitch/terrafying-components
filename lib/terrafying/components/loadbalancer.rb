@@ -10,7 +10,7 @@ module Terrafying
 
     class LoadBalancer < Terrafying::Context
 
-      attr_reader :id, :name, :type, :security_group, :ports, :target_groups, :alias_config
+      attr_reader :id, :name, :type, :security_group, :ports, :target_groups, :targets, :alias_config
 
       include Usable
 
@@ -109,6 +109,7 @@ module Terrafying
          .merge(application? ? { security_groups: [@security_group] } : {})
 
         @target_groups = []
+        @targets = []
 
         @ports.each { |port|
           port_ident = "#{ident}-#{port[:downstream_port]}"
@@ -122,7 +123,7 @@ module Terrafying
 
           ssl_options = alb_certs(port, port_ident)
 
-          resource :aws_lb_listener, port_ident, {
+          listener = resource :aws_lb_listener, port_ident, {
                      load_balancer_arn: @id,
                      port: port[:upstream_port],
                      protocol: port[:type].upcase,
@@ -133,6 +134,10 @@ module Terrafying
                    }.merge(ssl_options)
 
           @target_groups << target_group
+          @targets << {
+            target_group: target_group,
+            listener: listener
+          }
         }
 
         @alias_config = {
