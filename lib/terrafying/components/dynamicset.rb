@@ -139,7 +139,7 @@ module Terrafying
                    }
         }
 
-        self.used_by(load_balancer) if load_balancer.type == "application"
+        self.used_by(load_balancer) if load_balancer.application?
       end
 
       def autoscale_on_load_balancer(load_balancer, target_value:, disable_scale_in:)
@@ -148,6 +148,7 @@ module Terrafying
           lb_arn = load_balancer.id.to_s.gsub(/id/, 'arn_suffix')
           tg_arn = target.target_group.to_s.gsub(/id/, 'arn_suffix')
           listener = "aws_lb_listener.#{target.listener.to_s.split('.')[1]}"
+          autoscaling_attachment = "aws_autoscaling_attachment.#{policy_name}"
 
           resource :aws_autoscaling_policy, policy_name, {
             name: policy_name,
@@ -162,7 +163,7 @@ module Terrafying
               target_value: target_value,
               disable_scale_in: disable_scale_in
             },
-            depends_on: [listener]
+            depends_on: [listener, autoscaling_attachment]
           }
         end
       end
