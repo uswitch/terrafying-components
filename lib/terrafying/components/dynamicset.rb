@@ -153,7 +153,6 @@ module Terrafying
           resource :aws_autoscaling_policy, policy_name, {
             name: policy_name,
             autoscaling_group_name: @asg,
-            adjustment_type: 'ChangeInCapacity',
             policy_type: 'TargetTrackingScaling',
             target_tracking_configuration: {
               predefined_metric_specification: {
