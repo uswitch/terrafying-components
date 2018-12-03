@@ -130,7 +130,6 @@ module Terrafying
                      default_action: default_action,
                    }.merge(ssl_options)
 
-          redirect_http(port[:redirect_http_from_port], port[:upstream_port], ident) if port.key?(:redirect_http_from_port)
           register_target(default_action[:target_group_arn], listener) if default_action[:type] == 'forward'
         }
 
@@ -142,29 +141,13 @@ module Terrafying
         self
       end
 
-      def redirect_http(from_port, to_port, ident)
-        resource :aws_lb_listener, "#{ident}-#{from_port}", {
-          load_balancer_arn: @id,
-          port: from_port,
-          protocol: 'http',
-          default_action: {
-            type: 'redirect',
-            redirect: {
-              port: to_port,
-              protocol: 'HTTPS',
-              status_code: 'HTTP_301'
-            }
-          }
-        }
-      end
-
       def forward_to_tg(port, port_ident, vpc)
         target_group = resource :aws_lb_target_group, port_ident, {
           name: port_ident,
           port: port[:downstream_port],
           protocol: port[:type].upcase,
           vpc_id: vpc.id,
-        }.merge(port.has_key?(:health_check) ? { health_check: port[:health_check] }: {})
+        }.merge(port.key?(:health_check) ? { health_check: port[:health_check] }: {})
 
         {
           type: 'forward',
