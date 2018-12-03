@@ -6,6 +6,7 @@ RSpec.describe Object, '#enrich_ports' do
   context 'when http redirect is specified' do
     it 'should create a new http port' do
       ports = [{
+        type: 'https',
         number: 443,
         redirect_http_from_port: 80
       }]
@@ -13,7 +14,12 @@ RSpec.describe Object, '#enrich_ports' do
       enriched_ports = enrich_ports(ports)
 
       expect(enriched_ports).to include(
-        a_hash_including(name: 'http', upstream_port: 80, downstream_port: 80)
+        a_hash_including(
+          name: 'http',
+          type: 'http',
+          upstream_port: 80,
+          downstream_port: 80,
+        )
       )
     end
 

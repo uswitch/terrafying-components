@@ -41,6 +41,7 @@ def redirect_http(from_port, to_port)
   {
     upstream_port: from_port,
     downstream_port: from_port,
+    type: 'http',
     action: {
       type: 'redirect',
       redirect: { port: to_port, protocol: 'HTTPS', status_code: 'HTTP_301' }
