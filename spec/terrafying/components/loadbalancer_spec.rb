@@ -233,7 +233,7 @@ RSpec.describe Terrafying::Components::LoadBalancer do
       )
 
       expect(lb.targets.size).to eq(2)
-      expect(lb.targets).to include(
+      expect(lb.targets).to contain_exactly(
         have_attributes(
           listener:     '${aws_lb_listener.application-a-vpc-test-alb-80.id}',
           target_group: '${aws_lb_target_group.application-a-vpc-test-alb-80.id}'
