@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'digest'
 require 'terrafying'
 require 'terrafying/components'
 
@@ -10,6 +11,11 @@ module Terrafying
 
       def self.create_in(options)
         new(**options).tap(&:create)
+      end
+
+      def self.find_in(vpc)
+        new(vpc: vpc).find
+
       end
 
       def initialize(
@@ -23,10 +29,18 @@ module Terrafying
         @prom_version = prom_version
       end
 
+      def find
+        @security_group = aws.security_groups_in_vpc(
+          vpc.id,
+          "dynamicset-#{vpc.name}-prometheus"
+        )
+      end
+
       def create
         thanos_peers = @vpc.qualify('thanos')
 
         @service = create_prom(thanos_peers)
+        @security_group = @service.security_group
         create_prometheus_cloudwatch_alert(@service)
 
         @thanos = create_thanos(thanos_peers)
