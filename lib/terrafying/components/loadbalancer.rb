@@ -119,12 +119,7 @@ module Terrafying
         @ports.each { |port|
           port_ident = "#{ident}-#{port[:downstream_port]}"
 
-          target_group = resource :aws_lb_target_group, port_ident, {
-                                    name: port_ident,
-                                    port: port[:downstream_port],
-                                    protocol: port[:type].upcase,
-                                    vpc_id: vpc.id,
-                                  }.merge(port.has_key?(:health_check) ? { health_check: port[:health_check] }: {})
+          default_action = port.key?(:action) ? port[:action] : forward_to_tg(port, port_ident, vpc)
 
           ssl_options = alb_certs(port, port_ident)
 
@@ -132,16 +127,10 @@ module Terrafying
                      load_balancer_arn: @id,
                      port: port[:upstream_port],
                      protocol: port[:type].upcase,
-                     default_action: {
-                       target_group_arn: target_group,
-                       type: "forward",
-                     },
+                     default_action: default_action,
                    }.merge(ssl_options)
 
-          @targets << Struct::Target.new(
-            target_group: target_group,
-            listener: listener
-          )
+          register_target(default_action[:target_group_arn], listener) if default_action[:type] == 'forward'
         }
 
         @alias_config = {
@@ -149,8 +138,28 @@ module Terrafying
           zone_id: output_of(:aws_lb, ident, :zone_id),
           evaluate_target_health: true,
         }
-
         self
+      end
+
+      def forward_to_tg(port, port_ident, vpc)
+        target_group = resource :aws_lb_target_group, port_ident, {
+          name: port_ident,
+          port: port[:downstream_port],
+          protocol: port[:type].upcase,
+          vpc_id: vpc.id,
+        }.merge(port.key?(:health_check) ? { health_check: port[:health_check] }: {})
+
+        {
+          type: 'forward',
+          target_group_arn: target_group
+        }
+      end
+
+      def register_target(target_group, listener)
+        @targets << Struct::Target.new(
+          target_group: target_group,
+          listener: listener
+        )
       end
 
       def alb_certs(port, port_ident)

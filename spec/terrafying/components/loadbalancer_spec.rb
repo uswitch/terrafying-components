@@ -6,6 +6,8 @@ require 'terrafying/components/instance'
 require 'terrafying/components/loadbalancer'
 require 'terrafying/components/staticset'
 
+RSpec::Matchers.define_negated_matcher :not_include, :include
+
 RSpec.describe Terrafying::Components::LoadBalancer do
 
   it_behaves_like "a usable resource"
@@ -161,7 +163,87 @@ RSpec.describe Terrafying::Components::LoadBalancer do
         )
       end
     end
+  end
 
+  context('adding targets to the loadbalancer') do
+    it('should create a listener for each port') do
+      lb = Terrafying::Components::LoadBalancer.create_in(
+        @vpc, 'test-alb', ports: [
+          { type: 'http',  number: 80 },
+          { type: 'https', number: 443 }
+        ]
+      )
+
+      listeners = lb.output_with_children['resource']['aws_lb_listener'].values
+
+      expect(listeners).to include(
+        a_hash_including(port: 80,  protocol: 'HTTP'),
+        a_hash_including(port: 443, protocol: 'HTTPS')
+      )
+    end
+
+    it('should create a target group a port with no action') do
+      lb = Terrafying::Components::LoadBalancer.create_in(
+        @vpc, 'test-alb', ports: [{ type: 'http', number: 80 }]
+      )
+
+      target_group = lb.output_with_children['resource']['aws_lb_target_group'].values.first
+
+      expect(target_group).to include(port: 80, protocol: 'HTTP')
+    end
+
+    it('should create a listener with a forward action for a port by default') do
+      lb = Terrafying::Components::LoadBalancer.create_in(
+        @vpc, 'test-alb', ports: [{ type: 'http', number: 80 }]
+      )
+
+      listener = lb.output_with_children['resource']['aws_lb_listener'].values.first
+
+      expect(listener).to include(
+        port: 80,
+        default_action: a_hash_including(
+          type: 'forward',
+          target_group_arn: '${aws_lb_target_group.application-a-vpc-test-alb-80.id}'
+        )
+      )
+    end
+
+    it('should create a listener with with an action for a port an action specified') do
+      lb = Terrafying::Components::LoadBalancer.create_in(
+        @vpc, 'test-alb', ports: [{
+          type: 'http', number: 80, action: { type: 'redirect', redirect: {} }
+        }]
+      )
+
+      listener = lb.output_with_children['resource']['aws_lb_listener'].values.first
+
+      expect(listener).to include(
+        port: 80,
+        default_action: { type: 'redirect', redirect: {} }
+      )
+    end
+
+    it('should only register a target for each port with no actions specified') do
+      lb = Terrafying::Components::LoadBalancer.create_in(
+        @vpc, 'test-alb', ports: [
+          { type: 'http',  number: 80 },
+          { type: 'https', number: 443 },
+          { type: 'https', number: 4433, action: { type: 'redirect', redirect: {} } },
+        ]
+      )
+
+      expect(lb.targets.size).to eq(2)
+      expect(lb.targets).to contain_exactly(
+        have_attributes(
+          listener:     '${aws_lb_listener.application-a-vpc-test-alb-80.id}',
+          target_group: '${aws_lb_target_group.application-a-vpc-test-alb-80.id}'
+        ),
+        have_attributes(
+          listener:     '${aws_lb_listener.application-a-vpc-test-alb-443.id}',
+          target_group: '${aws_lb_target_group.application-a-vpc-test-alb-443.id}'
+        )
+      )
+    end
   end
 
   context('network load balancer') do
