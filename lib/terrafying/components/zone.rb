@@ -55,7 +55,9 @@ module Terrafying
         }
 
         if options[:vpc]
-          zone_config[:vpc_id] = options[:vpc].id
+          zone_config[:vpc] = {
+            vpc_id: options[:vpc].id
+          }
 
           ident = tf_safe("#{options[:vpc].name}-#{ident}")
         end
