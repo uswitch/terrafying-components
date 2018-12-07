@@ -403,5 +403,28 @@ RSpec.describe Terrafying::Components::Service do
         )
       end
     end
+
+    context('metrics ports') do
+      it 'should use the specified instance profile' do
+        port = 1234
+        prom_sec_group = 'sg-1234567890'
+        allow(@vpc.aws).to receive(:security_group_in_vpc).and_return(prom_sec_group)
+
+        service = Terrafying::Components::Service.create_in(@vpc, 'foo', metrics_ports: [port])
+
+        rules = service.output_with_children['resource']['aws_security_group_rule'].values
+
+        expect(rules).to include(
+          a_hash_including(
+            security_group_id: service.egress_security_group,
+            type: 'ingress',
+            from_port: port,
+            to_port: port,
+            protocol: 'tcp',
+            source_security_group_id: prom_sec_group
+          )
+        )
+      end
+    end
   end
 end

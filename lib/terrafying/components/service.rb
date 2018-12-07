@@ -10,6 +10,7 @@ require 'terrafying/components/ignition'
 require 'terrafying/components/instance'
 require 'terrafying/components/instanceprofile'
 require 'terrafying/components/loadbalancer'
+require 'terrafying/components/prometheus'
 require 'terrafying/components/selfsignedca'
 require 'terrafying/components/staticset'
 require 'terrafying/components/usable'
@@ -152,7 +153,7 @@ module Terrafying
       end
 
       def allow_scrape(vpc, ports, security_group)
-        prom = Prometheus.find_in(vpc)
+        prom = Prometheus.find_in(vpc: vpc)
         ports.each do |port|
           sg_rule_ident = Digest::SHA256.hexdigest("#{vpc.name}-#{port}-#{security_group}-#{prom.security_group}")
           resource :aws_security_group_rule, sg_rule_ident, {
