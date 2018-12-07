@@ -7,14 +7,14 @@ require 'terrafying/components'
 module Terrafying
   module Components
     class Prometheus < Terrafying::Context
-      attr_reader :prometheus
+      attr_reader :prometheus, :security_group
 
       def self.create_in(options)
         new(**options).tap(&:create)
       end
 
-      def self.find_in(vpc)
-        new(vpc: vpc).find
+      def self.find_in(options)
+        new(**options).tap(&:find)
       end
 
       def initialize(
@@ -33,7 +33,7 @@ module Terrafying
       end
 
       def find
-        @security_group = aws.security_groups_in_vpc(
+        @security_group = aws.security_group_in_vpc(
           @vpc.id,
           "dynamicset-#{@vpc.name}-#{@prom_name}"
         )
