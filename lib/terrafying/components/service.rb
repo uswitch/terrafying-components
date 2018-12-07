@@ -58,7 +58,8 @@ module Terrafying
           subnets: vpc.subnets.fetch(:private, []),
           startup_grace_period: 300,
           depends_on: [],
-          audit_role: "arn:aws:iam::#{aws.account_id}:role/auditd_logging"
+          audit_role: "arn:aws:iam::#{aws.account_id}:role/auditd_logging",
+          metrics_ports: [],
         }.merge(options)
 
         unless options[:audit_role].nil?
@@ -117,6 +118,10 @@ module Terrafying
         @instance_set = add! set.create_in(vpc, name, options.merge(instance_set_options))
         @security_group = @instance_set.security_group
 
+        if options[:metrics_ports] && !options[:metrics_ports].empty?
+          allow_scrape(vpc, options[:metrics_ports], @security_group)
+        end
+
         if wants_load_balancer
           @load_balancer = add! LoadBalancer.create_in(
                                   vpc, name, options.merge(
@@ -144,6 +149,21 @@ module Terrafying
         end
 \
         self
+      end
+
+      def allow_scrape(vpc, ports, security_group)
+        prom = Prometheus.find_in(vpc)
+        ports.each do |port|
+          sg_rule_ident = Digest::SHA256.hexdigest("#{vpc.name}-#{port}-#{security_group}-#{prom.security_group}")
+          resource :aws_security_group_rule, sg_rule_ident, {
+            security_group_id: security_group,
+            type: 'ingress',
+            from_port: port,
+            to_port: port,
+            protocol: 'tcp',
+            source_security_group_id: prom.security_group
+          }
+        end
       end
 
       def with_endpoint_service(options = {})
