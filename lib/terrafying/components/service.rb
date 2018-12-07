@@ -118,7 +118,7 @@ module Terrafying
         @instance_set = add! set.create_in(vpc, name, options.merge(instance_set_options))
         @security_group = @instance_set.security_group
 
-        unless options[:metrics_ports].empty?
+        if options[:metrics_ports] && !options[:metrics_ports].empty?
           allow_scrape(vpc, options[:metrics_ports], @security_group)
         end
 

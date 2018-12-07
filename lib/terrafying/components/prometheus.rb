@@ -7,7 +7,7 @@ require 'terrafying/components'
 module Terrafying
   module Components
     class Prometheus < Terrafying::Context
-      attr_reader :service
+      attr_reader :prometheus
 
       def self.create_in(options)
         new(**options).tap(&:create)
@@ -15,57 +15,78 @@ module Terrafying
 
       def self.find_in(vpc)
         new(vpc: vpc).find
-
       end
 
       def initialize(
         vpc:,
+        thanos_name: 'thanos',
         thanos_version: 'master-2018-10-29-8f247d6',
+        prom_name: 'prometheus',
         prom_version: 'v2.4.3'
       )
         super()
         @vpc = vpc
+        @thanos_name = thanos_name
         @thanos_version = thanos_version
+        @prom_name = prom_name
         @prom_version = prom_version
       end
 
       def find
         @security_group = aws.security_groups_in_vpc(
-          vpc.id,
-          "dynamicset-#{vpc.name}-prometheus"
+          @vpc.id,
+          "dynamicset-#{@vpc.name}-#{@prom_name}"
         )
       end
 
       def create
-        thanos_peers = @vpc.qualify('thanos')
-
-        @service = create_prom(thanos_peers)
-        @security_group = @service.security_group
-        create_prometheus_cloudwatch_alert(@service)
+        thanos_peers = @vpc.zone.qualify(@thanos_name)
 
         @thanos = create_thanos(thanos_peers)
         create_thanos_cloudwatch_alert(@thanos)
 
-        @service.used_by(@thanos)
-        @thanos.used_by(@service)
+        @prometheus = create_prom(thanos_peers)
+        @security_group = @prometheus.egress_security_group
+        create_prometheus_cloudwatch_alert(@prometheus)
+        allow_thanos_gossip(@prometheus.egress_security_group)
+
+        @prometheus.used_by_cidr(@vpc.cidr)
+        @thanos.used_by_cidr(@vpc.cidr)
       end
 
       def create_prom(thanos_peers)
         add! Terrafying::Components::Service.create_in(
-          @vpc, 'prometheus',
-          ports: [10900, 10901, 10902],
-          loadbalancer: false,
-          instance_type: 'm4.large',
+          @vpc, @prom_name,
+          ports: [
+            {
+              type: 'http',
+              number: 9090,
+              health_check: { path: '/status', protocol: 'HTTP' }
+            }
+          ],
+          instance_type: 'm5.large',
           iam_policy_statements: thanos_store_access,
           instances: { max: 3, min: 1, desired: 2 },
-          units: [prometheus_unit(thanos_peers), thanos_sidecar_unit],
-          files: [prometheus_conf, thanos_bucket],
+          units: [prometheus_unit, thanos_sidecar_unit(thanos_peers)],
+          files: [prometheus_conf, thanos_bucket]
         )
+      end
+
+      def allow_thanos_gossip(security_group)
+        rule_ident = Digest::SHA2.hexdigest("#{security_group}-thanos-#{@vpc.name}")[0..24]
+        resource :aws_security_group_rule, rule_ident, {
+          security_group_id: security_group,
+          type:      'ingress',
+          from_port: 10900,
+          to_port:   10902,
+          protocol:  'tcp',
+          cidr_blocks: [@vpc.cidr]
+        }
       end
 
       def create_thanos(thanos_peers)
         add! Terrafying::Components::Service.create_in(
-          @vpc, 'thanos',
+          @vpc, @thanos_name,
           ports: [
             {
               number: 10902,
@@ -81,7 +102,7 @@ module Terrafying
               number: 10900
             }
           ],
-          instance_type: 't2.medium',
+          instance_type: 't3.medium',
           units: [thanos_unit(thanos_peers)],
           instances: { max: 3, min: 1, desired: 2 }
         )
@@ -101,14 +122,14 @@ module Terrafying
             ExecStartPre=-/usr/bin/docker network create --driver bridge prom
             ExecStartPre=-/usr/bin/docker kill prometheus
             ExecStartPre=-/usr/bin/docker rm prometheus
-            ExecStartPre=/usr/bin/docker pull quay.io/prometheus/prometheus:#{@thanos_version}
+            ExecStartPre=/usr/bin/docker pull quay.io/prometheus/prometheus:#{@prom_version}
             ExecStartPre=-/usr/bin/sed -i "s/{{HOST}}/%H/" /opt/prometheus/prometheus.yml
             ExecStartPre=/usr/bin/install -d -o nobody -g nobody -m 0755 /opt/prometheus/data
             ExecStart=/usr/bin/docker run --name prometheus \
               -p 9090:9090 \
               --network=prom \
               -v /opt/prometheus:/opt/prometheus \
-              quay.io/prometheus/prometheus:#{@thanos_version} \
+              quay.io/prometheus/prometheus:#{@prom_version} \
               --storage.tsdb.path=/opt/prometheus/data \
               --storage.tsdb.retention=1d \
               --storage.tsdb.min-block-duration=2h \
@@ -161,17 +182,17 @@ module Terrafying
         {
           path: '/opt/prometheus/prometheus.yml',
           mode: 0o644,
-          contents: <<~PROM_CONF
+          contents: <<~PROM
             global:
               external_labels:
                 monitor: prometheus
-                cluster: data
+                cluster: "#{@vpc.name}"
                 replica: {{HOST}}
               scrape_interval: 15s
             scrape_configs:
             - job_name: "ec2"
               params:
-                format: ['prometheus']
+                format: ["prometheus"]
               ec2_sd_configs:
               - region: eu-west-1
                 filters:
@@ -179,18 +200,20 @@ module Terrafying
                   values: ["#{@vpc.id}"]
                 - name: tag-key
                   values: ["prometheus_port"]
-               relabel_configs:
+              relabel_configs:
               - source_labels: [__meta_ec2_private_ip, __meta_ec2_tag_prometheus_port]
                 replacement: $1:$2
                 regex: ([^:]+)(?::\\\\d+)?;(\\\\d+)
                 target_label: __address__
               - source_labels: [__meta_ec2_instance_id]
                 target_label: instance_id
+              - source_labels: [__meta_ec2_tag_envoy_cluster]
+                target_label: envoy_cluster
               - source_labels: [__meta_ec2_tag_prometheus_path]
                 regex: (.+)
                 replacement: $1
                 target_label: __metrics_path__
-          PROM_CONF
+          PROM
         }
       end
 
@@ -282,23 +305,23 @@ module Terrafying
           statistic: 'Minimum',
           alarm_description: "Monitoring #{name} target group host health",
           dimensions: dimensions,
-          alarm_actions: ['${aws_sns_topic.prometheus_cloudwatch_topic.arn}']
+          alarm_actions: ['arn:aws:sns:eu-west-1:136393635417:prometheus_cloudwatch_topic']
         }
       end
 
       def create_prometheus_cloudwatch_alert(service)
-        cloudwatch_alarm(service.name, 'AWS/ApplicationELB', {
+        cloudwatch_alarm service.name, 'AWS/ApplicationELB', {
           LoadBalancer: output_of('aws_lb', service.load_balancer.name, 'arn_suffix'),
-          TargetGroup: service.load_balancer.target_groups[0].to_s.gsub(/id/, 'arn_suffix')
-        })
+          TargetGroup: service.load_balancer.targets.first.target_group.to_s.gsub(/id/, 'arn_suffix')
+        }
       end
 
       def create_thanos_cloudwatch_alert(service)
-        service.load_balancer.target_groups.each_with_index do |target_group, i|
-          cloudwatch_alarm("#{service.name}_#{i}", 'AWS/NetworkELB', {
+        service.load_balancer.targets.each_with_index do |target, i|
+          cloudwatch_alarm "#{service.name}_#{i}", 'AWS/NetworkELB', {
             LoadBalancer: output_of('aws_lb', service.load_balancer.name, 'arn_suffix'),
-            TargetGroup: target_group.to_s.gsub(/id/, 'arn_suffix')
-          })
+            TargetGroup: target.target_group.to_s.gsub(/id/, 'arn_suffix')
+          }
         end
       end
     end
