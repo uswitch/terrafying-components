@@ -53,19 +53,13 @@ module Terrafying
         @ports = enrich_ports(options[:ports])
 
         @security_group = resource :aws_security_group, ident, {
-                                     name: "dynamicset-#{ident}",
-                                     description: "Describe the ingress and egress of the service #{ident}",
-                                     tags: options[:tags],
-                                     vpc_id: vpc.id,
-                                     egress: [
-                                       {
-                                         from_port: 0,
-                                         to_port: 0,
-                                         protocol: -1,
-                                         cidr_blocks: ["0.0.0.0/0"],
-                                       }
-                                     ],
-                                   }
+          name: "dynamicset-#{ident}",
+          description: "Describe the ingress and egress of the service #{ident}",
+          tags: options[:tags],
+          vpc_id: vpc.id
+        }
+
+        default_egress_rule(ident, @security_group)
 
         path_mtu_setup!
 
@@ -121,6 +115,18 @@ module Terrafying
         @asg = output_of(:aws_cloudformation_stack, ident, 'outputs["AsgName"]')
 
         self
+      end
+
+
+      def default_egress_rule(ident, security_group)
+        resource :aws_security_group_rule, "#{ident}-default-egress", {
+          security_group_id: security_group,
+          type: 'egress',
+          from_port: 0,
+          to_port: 0,
+          protocol: -1,
+          cidr_blocks: ['0.0.0.0/0'],
+        }
       end
 
       def profile_from(profile)

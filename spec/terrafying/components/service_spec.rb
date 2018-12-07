@@ -405,7 +405,7 @@ RSpec.describe Terrafying::Components::Service do
     end
 
     context('metrics ports') do
-      it 'should use the specified instance profile' do
+      it 'should allow the prom security group to connect to the metric ports' do
         port = 1234
         prom_sec_group = 'sg-1234567890'
         allow(@vpc.aws).to receive(:security_group_in_vpc).and_return(prom_sec_group)

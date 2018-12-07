@@ -59,19 +59,13 @@ module Terrafying
         @ports = enrich_ports(options[:ports])
 
         @security_group = resource :aws_security_group, ident, {
-                                     name: "staticset-#{ident}",
-                                     description: "Describe the ingress and egress of the static set #{ident}",
-                                     tags: options[:tags],
-                                     vpc_id: vpc.id,
-                                     egress: [
-                                       {
-                                         from_port: 0,
-                                         to_port: 0,
-                                         protocol: -1,
-                                         cidr_blocks: ["0.0.0.0/0"],
-                                       }
-                                     ],
-                                   }
+          name: "staticset-#{ident}",
+          description: "Describe the ingress and egress of the static set #{ident}",
+          tags: options[:tags],
+          vpc_id: vpc.id,
+        }
+
+        default_egress_rule(ident, @security_group)
 
         path_mtu_setup!
 
@@ -111,6 +105,17 @@ module Terrafying
         }
 
         self
+      end
+
+      def default_egress_rule(ident, security_group)
+        resource :aws_security_group_rule, "#{ident}-default-egress", {
+          security_group_id: security_group,
+          type: 'egress',
+          from_port: 0,
+          to_port: 0,
+          protocol: -1,
+          cidr_blocks: ['0.0.0.0/0'],
+        }
       end
 
       def volume_for(name, instance, volume, tags)
