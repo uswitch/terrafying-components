@@ -34,6 +34,24 @@ module Terrafying
 
         @ident = "#{name}-ca"
 
+        if options[:public_certificate]
+          cert_acl = "public-read"
+        else
+          cert_acl = "private"
+        end
+
+        if options[:ca_key] && options[:ca_cert]
+          @ca_key = options[:ca_key]
+          @ca_cert = options[:ca_cert]
+          resource :aws_s3_bucket_object, "#{@name}-cert", {
+                     bucket: @bucket,
+                     key: File.join(@prefix, @name, "ca.cert"),
+                     content: @ca_cert,
+                     acl: cert_acl,
+                   }
+          return self
+        end
+
         provider :tls, {}
 
         resource :tls_private_key, @ident, {
@@ -60,12 +78,6 @@ module Terrafying
 
         @ca_key = output_of(:tls_private_key, @ident, :private_key_pem)
         @ca_cert = output_of(:tls_self_signed_cert, @ident, :cert_pem)
-
-        if options[:public_certificate]
-          cert_acl = "public-read"
-        else
-          cert_acl = "private"
-        end
 
         resource :aws_s3_bucket_object, "#{@name}-cert", {
                    bucket: @bucket,
