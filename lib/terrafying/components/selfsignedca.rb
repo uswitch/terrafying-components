@@ -1,4 +1,3 @@
-@algorithm
 require 'terrafying/components/ca'
 require 'terrafying/generator'
 
