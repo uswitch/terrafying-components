@@ -1,4 +1,4 @@
-
+@algorithm
 require 'terrafying/components/ca'
 require 'terrafying/generator'
 
@@ -31,6 +31,7 @@ module Terrafying
         @name = name
         @bucket = bucket
         @prefix = options[:prefix]
+        @algorithm = options[:algorithm] || "ECDSA"
 
         @ident = "#{name}-ca"
 
@@ -55,12 +56,12 @@ module Terrafying
         provider :tls, {}
 
         resource :tls_private_key, @ident, {
-                   algorithm: "ECDSA",
+                   algorithm: @algorithm,
                    ecdsa_curve: "P384",
                  }
 
         resource :tls_self_signed_cert, @ident, {
-                   key_algorithm: "ECDSA",
+                   key_algorithm: @algorithm,
                    private_key_pem: output_of(:tls_private_key, @ident, :private_key_pem),
                    subject: {
                      common_name: options[:common_name],
@@ -141,12 +142,12 @@ module Terrafying
         key_ident = "#{@name}-#{tf_safe(name)}"
 
         ctx.resource :tls_private_key, key_ident, {
-                       algorithm: "ECDSA",
+                       algorithm: @algorithm,
                        ecdsa_curve: "P384",
                      }
 
         ctx.resource :tls_cert_request, key_ident, {
-                       key_algorithm: "ECDSA",
+                       key_algorithm: @algorithm,
                        private_key_pem: output_of(:tls_private_key, key_ident, :private_key_pem),
                        subject: {
                          common_name: options[:common_name],
@@ -158,7 +159,7 @@ module Terrafying
 
         ctx.resource :tls_locally_signed_cert, key_ident, {
                        cert_request_pem: output_of(:tls_cert_request, key_ident, :cert_request_pem),
-                       ca_key_algorithm: "ECDSA",
+                       ca_key_algorithm: @algorithm,
                        ca_private_key_pem: @ca_key,
                        ca_cert_pem: @ca_cert,
                        validity_period_hours: options[:validity_in_hours],
