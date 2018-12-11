@@ -1,3 +1,5 @@
+require 'terrafying/components/instance'
+
 RSpec::Matchers.define_negated_matcher :not_include, :include
 RSpec::Matchers.define_negated_matcher :not_match, :match
 

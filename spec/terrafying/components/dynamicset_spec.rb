@@ -67,4 +67,31 @@ RSpec.describe Terrafying::Components::DynamicSet do
     expect(template_body["Resources"]["AutoScalingGroup"]["Properties"]["MinSize"]).to eq(asg.min_size.to_s)
     expect(template_body["Resources"]["AutoScalingGroup"]["Properties"]["DesiredCapacity"]).to eq(asg.desired_capacity.to_s)
   end
+
+  context 'security_groups' do
+    it 'should define no rules directly on the egress group' do
+      set = described_class.create_in(@vpc, "foo")
+
+      rules = set.output['resource']['aws_security_group']['a-vpc-foo']
+
+      expect(rules.keys).to not_include(:egress, :ingress)
+    end
+
+    it 'should add a default egress rule to 0.0.0.0/0' do
+      set = described_class.create_in(@vpc, "foo")
+
+      rules = set.output['resource']['aws_security_group_rule'].values
+
+      expect(rules).to include(
+        a_hash_including(
+          security_group_id: set.egress_security_group,
+          type: 'egress',
+          from_port: 0,
+          to_port: 0,
+          protocol: -1,
+          cidr_blocks: ['0.0.0.0/0'],
+        )
+      )
+    end
+  end
 end

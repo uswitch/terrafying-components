@@ -105,4 +105,30 @@ RSpec.describe Terrafying::Components::StaticSet do
     expect(port_rules.all? {|r| r[:self]}).to be true
   end
 
+  context 'security_groups' do
+    it 'should define no rules directly on the egress group' do
+      set = described_class.create_in(@vpc, "foo")
+
+      rules = set.output['resource']['aws_security_group']['a-vpc-foo']
+
+      expect(rules.keys).to not_include(:egress, :ingress)
+    end
+
+    it 'should add a default egress rule to 0.0.0.0/0' do
+      set = described_class.create_in(@vpc, "foo")
+
+      rules = set.output['resource']['aws_security_group_rule'].values
+
+      expect(rules).to include(
+        a_hash_including(
+          security_group_id: set.egress_security_group,
+          type: 'egress',
+          from_port: 0,
+          to_port: 0,
+          protocol: -1,
+          cidr_blocks: ['0.0.0.0/0'],
+        )
+      )
+    end
+  end
 end
