@@ -40,6 +40,8 @@ module Terrafying
           cert_acl = "private"
         end
 
+        @source = File.join("s3://", @bucket, @prefix, @name, "ca.cert")
+
         if options[:ca_key] && options[:ca_cert]
           @ca_key = options[:ca_key]
           @ca_cert = options[:ca_cert]
@@ -73,8 +75,6 @@ module Terrafying
                      "digitalSignature",
                    ],
                  }
-
-        @source = File.join("s3://", @bucket, @prefix, @name, "ca.cert")
 
         @ca_key = output_of(:tls_private_key, @ident, :private_key_pem)
         @ca_cert = output_of(:tls_self_signed_cert, @ident, :cert_pem)
