@@ -70,6 +70,7 @@ module Terrafying
           public: false,
           subnets: vpc.subnets.fetch(:private, []),
           hex_ident: false,
+          idle_timeout: nil,
           tags: {}
         }.merge(options)
 
@@ -112,7 +113,8 @@ module Terrafying
           internal: !options[:public],
           tags: @tags,
         }.merge(subnets_for(options[:subnets]))
-         .merge(application? ? { security_groups: [@security_group] } : {})
+         .merge(application? ? { security_groups: [@security_group], idle_timeout: options[:idle_timeout] } : {})
+         .compact
 
         @targets = []
 
