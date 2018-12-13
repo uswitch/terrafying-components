@@ -163,6 +163,30 @@ RSpec.describe Terrafying::Components::LoadBalancer do
         )
       end
     end
+
+    context 'idle timeouts' do
+      it 'should set the idle timeout if specified' do
+        lb = Terrafying::Components::LoadBalancer.create_in(
+          @vpc, 'test-alb',
+          ports: [{ type: 'https', number: 443, ssl_certificate: ['test-1', 'test-2', 'test-3'] }],
+          idle_timeout: 1
+        )
+
+        lb_resource = lb.output_with_children['resource']['aws_lb'].values.first
+
+        expect(lb_resource).to include(idle_timeout: 1)
+      end
+
+      it 'should not set the idle timeout if not specified' do
+        lb = Terrafying::Components::LoadBalancer.create_in(
+          @vpc, 'test-alb', ports: [{ type: 'https', number: 443, ssl_certificate: ['test-1', 'test-2', 'test-3'] }]
+        )
+
+        lb_resource = lb.output_with_children['resource']['aws_lb'].values.first
+
+        expect(lb_resource.keys).to not_include(:idle_timeout)
+      end
+    end
   end
 
   context('adding targets to the loadbalancer') do
@@ -261,6 +285,16 @@ RSpec.describe Terrafying::Components::LoadBalancer do
           { subnet_id: '${aws_subnet.a-vpc-private-eu-west-1c.id}' }
         )
       )
+    end
+
+    it 'should never set idle timeout even if specified' do
+      lb = Terrafying::Components::LoadBalancer.create_in(
+        @vpc, 'test-alb', ports: [{ type: 'tcp', number: 22 }], idle_timeout: 1
+      )
+
+      lb_resource = lb.output_with_children['resource']['aws_lb'].values.first
+
+      expect(lb_resource.keys).to not_include(:idle_timeout)
     end
   end
 end
