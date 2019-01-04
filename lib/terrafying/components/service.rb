@@ -148,7 +148,17 @@ module Terrafying
             vpc.zone.add_record_in(self, i.name, [i.ip_address])
           }
         end
-\
+
+        if set == DynamicSet && options[:rolling_update] == :signal
+          @instance_profile.add_statement!(
+            {
+              Effect: "Allow",
+              Action: [ "cloudformation:SignalResource" ],
+              Resource: [ @instance_set.stack_arn ],
+            }
+          )
+        end
+
         self
       end
 

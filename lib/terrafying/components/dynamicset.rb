@@ -9,7 +9,7 @@ module Terrafying
 
     class DynamicSet < Terrafying::Context
 
-      attr_reader :name, :asg
+      attr_reader :name, :asg, :stack_arn
 
       include Usable
 
@@ -113,6 +113,7 @@ module Terrafying
                        }
 
         @asg = output_of(:aws_cloudformation_stack, ident, 'outputs["AsgName"]')
+        @stack_arn = output_of(:aws_cloudformation_stack, ident, 'arn')
 
         self
       end
