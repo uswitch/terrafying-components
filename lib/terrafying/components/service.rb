@@ -154,7 +154,7 @@ module Terrafying
             {
               Effect: "Allow",
               Action: [ "cloudformation:SignalResource" ],
-              Resource: [ @instance_set.stack_arn ],
+              Resource: [ @instance_set.stack ],
             }
           )
         end

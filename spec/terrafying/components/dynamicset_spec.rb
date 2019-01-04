@@ -27,7 +27,7 @@ RSpec.describe Terrafying::Components::DynamicSet do
 
     launch_config = output["resource"]["aws_launch_configuration"].values.first
 
-    expect(launch_config[:depends_on]).to include(*instance_profile.resource_names)
+    expect(launch_config[:depends_on]).to include(instance_profile.resource_name)
   end
 
   it "should not set update policy if rollig_update is false" do

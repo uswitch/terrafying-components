@@ -32,7 +32,7 @@ RSpec.describe Terrafying::Components::Service do
                                             {
                                               Effect: 'Allow',
                                               Action: ['cloudformation:SignalResource'],
-                                              Resource: [service.instance_set.stack_arn.to_s],
+                                              Resource: [service.instance_set.stack.to_s],
                                             }
                                           )
                                         )
@@ -55,7 +55,7 @@ RSpec.describe Terrafying::Components::Service do
                                                 {
                                                   Effect: 'Allow',
                                                   Action: ['cloudformation:SignalResource'],
-                                                  Resource: [service.instance_set.stack_arn.to_s],
+                                                  Resource: [service.instance_set.stack.to_s],
                                                 }
                                               )
                                             )

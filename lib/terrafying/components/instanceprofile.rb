@@ -5,7 +5,7 @@ module Terrafying
 
     class InstanceProfile < Terrafying::Context
 
-      attr_reader :id, :role_arn, :role_resource
+      attr_reader :id, :resource_name, :role_arn, :role_resource
 
       def self.create(name, options={})
         InstanceProfile.new.create name, options
@@ -49,6 +49,7 @@ module Terrafying
                          role: output_of(:aws_iam_role, name, :name),
                        }
         @name = name
+        @resource_name = "aws_iam_instance_profile.#{name}"
 
         @role_arn = output_of(:aws_iam_role, name, :arn)
         @role_resource = "aws_iam_role.#{name}"

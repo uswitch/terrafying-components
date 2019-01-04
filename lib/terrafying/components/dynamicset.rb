@@ -9,7 +9,7 @@ module Terrafying
 
     class DynamicSet < Terrafying::Context
 
-      attr_reader :name, :asg, :stack_arn
+      attr_reader :name, :stack, :asg
 
       include Usable
 
@@ -81,7 +81,7 @@ module Terrafying
                                    lifecycle: {
                                      create_before_destroy: true,
                                    },
-                                   depends_on: resources_from(options[:instance_profile]),
+                                   depends_on: resource_name_from(options[:instance_profile]),
                                  }
 
         if options[:instances][:track]
@@ -103,17 +103,16 @@ module Terrafying
         end
         tags = { Name: ident, service_name: name,}.merge(options[:tags]).merge(options[:instances].fetch(:tags, {})).map { |k,v| { Key: k, Value: v, PropagateAtLaunch: true }}
 
-        asg = resource :aws_cloudformation_stack, ident, {
-                         name: ident,
-                         disable_rollback: true,
-                         template_body: generate_template(
-                           options[:health_check], options[:instances], launch_config,
-                           options[:subnets].map(&:id), tags, options[:rolling_update]
-                         ),
-                       }
+        @stack = resource :aws_cloudformation_stack, ident, {
+                          name: ident,
+                          disable_rollback: true,
+                          template_body: generate_template(
+                            options[:health_check], options[:instances], launch_config,
+                            options[:subnets].map(&:id), tags, options[:rolling_update]
+                          ),
+                        }
 
         @asg = output_of(:aws_cloudformation_stack, ident, 'outputs["AsgName"]')
-        @stack_arn = output_of(:aws_cloudformation_stack, ident, 'arn')
 
         self
       end
@@ -134,8 +133,8 @@ module Terrafying
         profile.respond_to?(:id) ? profile.id : profile
       end
 
-      def resources_from(profile)
-        profile.respond_to?(:resource_names) ? profile.resource_names : []
+      def resource_name_from(profile)
+        profile.respond_to?(:resource_name) ? [profile.resource_name] : []
       end
 
       def attach_load_balancer(load_balancer)
