@@ -44,12 +44,16 @@ module Terrafying
                    )
                  }
 
-        resource :aws_iam_role_policy, name, {
-                   name: name,
-                   policy: JSON.pretty_generate(
-                     {
-                       Version: "2012-10-17",
-                       Statement: [
+        @id = resource :aws_iam_instance_profile, name, {
+                         name: name,
+                         role: output_of(:aws_iam_role, name, :name),
+                       }
+        @name = name
+
+        @role_arn = output_of(:aws_iam_role, name, :arn)
+        @role_resource = "aws_iam_role.#{name}"
+
+        @statements = [
                          {
                            Sid: "Stmt1442396947000",
                            Effect: "Allow",
@@ -63,22 +67,33 @@ module Terrafying
                              "arn:aws:iam::*"
                            ]
                          }
-                       ].push(*options[:statements])
-                     }
-                   ),
-                   role: output_of(:aws_iam_role, name, :name)
-                 }
+        ].push(*options[:statements])
 
-        @id = resource :aws_iam_instance_profile, name, {
-                         name: name,
-                         role: output_of(:aws_iam_role, name, :name),
-                       }
+        @policy_config = {
+          name: @name,
+          policy: policy,
+          role: output_of(:aws_iam_role, @name, :name),
+        }
 
-        @role_arn = output_of(:aws_iam_role, name, :arn)
-        @role_resource = "aws_iam_role.#{name}"
+        resource :aws_iam_role_policy, @name, @policy_config
 
         self
       end
+
+      def policy
+        JSON.pretty_generate(
+          {
+            Version: "2012-10-17",
+            Statement: @statements,
+          }
+        )
+      end
+
+      def add_statement!(statement)
+        @statements << statement
+        @policy_config[:policy] = policy
+      end
+
     end
   end
 end

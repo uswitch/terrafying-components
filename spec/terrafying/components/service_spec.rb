@@ -12,6 +12,57 @@ RSpec.describe Terrafying::Components::Service do
     @vpc = stub_vpc("a-vpc", "10.0.0.0/16")
   end
 
+  context "cfn signal" do
+
+    it "should add an iam permission to cfn signal" do
+      service = Terrafying::Components::Service.create_in(
+        @vpc, "foo", {
+          instances: { min: 1, max: 1, desired: 1 },
+          rolling_update: :signal,
+        }
+      )
+
+      output = service.output_with_children
+
+      _, service_iam_policy = output["resource"]["aws_iam_role_policy"].select { |k, _| k == "a-vpc-foo" }.first
+      service_iam_statements = JSON.parse(service_iam_policy[:policy], symbolize_names: true)[:Statement]
+
+      expect(service_iam_statements).to include(
+                                          a_hash_including(
+                                            {
+                                              Effect: 'Allow',
+                                              Action: ['cloudformation:SignalResource'],
+                                              Resource: [service.instance_set.stack_arn.to_s],
+                                            }
+                                          )
+                                        )
+    end
+
+    it "should not add an iam permission by default" do
+      service = Terrafying::Components::Service.create_in(
+        @vpc, "foo", {
+          instances: { min: 1, max: 1, desired: 1 },
+        }
+      )
+
+      output = service.output_with_children
+
+      _, service_iam_policy = output["resource"]["aws_iam_role_policy"].select { |k, _| k == "a-vpc-foo" }.first
+      service_iam_statements = JSON.parse(service_iam_policy[:policy], symbolize_names: true)[:Statement]
+
+      expect(service_iam_statements).to_not include(
+                                              a_hash_including(
+                                                {
+                                                  Effect: 'Allow',
+                                                  Action: ['cloudformation:SignalResource'],
+                                                  Resource: [service.instance_set.stack_arn.to_s],
+                                                }
+                                              )
+                                            )
+    end
+
+  end
+
   it "should use user_data if passed in" do
     user_data = "something"
     service = Terrafying::Components::Service.create_in(
