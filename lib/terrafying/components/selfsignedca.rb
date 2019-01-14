@@ -25,6 +25,7 @@ module Terrafying
           common_name: name,
           organization: "uSwitch Limited",
           public_certificate: false,
+          curve: "P384",
         }.merge(options)
 
         @name = name
@@ -58,7 +59,7 @@ module Terrafying
 
         resource :tls_private_key, @ident, {
                    algorithm: @algorithm,
-                   ecdsa_curve: "P384",
+                   ecdsa_curve: options[:curve],
                  }
 
         resource :tls_self_signed_cert, @ident, {
@@ -136,13 +137,14 @@ module Terrafying
           ],
           dns_names: [],
           ip_addresses: [],
+          curve: "P384",
         }.merge(options)
 
         key_ident = "#{@name}-#{tf_safe(name)}"
 
         ctx.resource :tls_private_key, key_ident, {
                        algorithm: @algorithm,
-                       ecdsa_curve: "P384",
+                       ecdsa_curve: options[:curve],
                      }
 
         ctx.resource :tls_cert_request, key_ident, {
