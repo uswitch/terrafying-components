@@ -80,7 +80,7 @@ module Terrafying
           acl: @ca_cert_acl
         }
 
-        @source = File.join("s3://", @bucket, @prefix, @name, "ca.cert")
+        @source = File.join("s3://", path("#{@name}-cert"))
 
         self
       end
@@ -140,7 +140,7 @@ module Terrafying
                        content: output_of(:acme_certificate, key_ident, :certificate_pem).to_s + @ca_cert,
                      }
 
-        reference_keypair(ctx, name)
+        reference_keypair(ctx, name, "#{key_ident}-key", "#{key_ident}-cert")
       end
 
     end
