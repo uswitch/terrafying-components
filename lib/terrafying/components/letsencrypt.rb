@@ -64,7 +64,7 @@ module Terrafying
 
         resource :aws_s3_bucket_object, "#{@name}-account", {
           bucket: @bucket,
-          key: File.join(@prefix, @name, "account.key"),
+          key: File.join('', @prefix, @name, "account.key"),
           content: @account_key,
         }
 
@@ -76,7 +76,7 @@ module Terrafying
 
         resource :aws_s3_bucket_object, "#{@name}-cert", {
           bucket: @bucket,
-          key: File.join(@prefix, @name, "ca.cert"),
+          key: File.join('', @prefix, @name, "ca.cert"),
           content: @ca_cert,
           acl: @ca_cert_acl
         }
@@ -132,13 +132,13 @@ module Terrafying
 
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-key", {
                        bucket: @bucket,
-                       key: File.join(@prefix, @name, name, "key"),
+                       key: File.join('', @prefix, @name, name, "${sha256(tls_private_key.#{key_ident}.private_key_pem)}", "key"),
                        content: output_of(:tls_private_key, key_ident, :private_key_pem),
                      }
 
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert", {
                        bucket: @bucket,
-                       key: File.join(@prefix, @name, name, "cert"),
+                       key: File.join('', @prefix, @name, name, "${sha256(acme_certificate.#{key_ident}.certificate_pem)}", "cert"),
                        content: output_of(:acme_certificate, key_ident, :certificate_pem).to_s + @ca_cert,
                      }
 

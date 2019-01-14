@@ -50,8 +50,21 @@ shared_examples "a CA" do
         expect(ca_cert.count).to eq(1)
         expect(ca_cert[0][:acl]).to eq("public-read")
       end
-  end
+    end
 
+    it 'should have keys/certs that start with "/" when it has no prefix' do
+      ca = described_class.create(ca_name, bucket_name)
+      s3_objects = ca.output['resource']['aws_s3_bucket_object'].values
+
+      expect(s3_objects).to all(include(key: start_with('/')))
+    end
+ 
+    it 'should have keys/certs that start with "/" when it has a prefix' do
+      ca = described_class.create(ca_name, bucket_name, prefix: 'a_prefix')
+      s3_objects = ca.output['resource']['aws_s3_bucket_object'].values
+
+      expect(s3_objects).to all(include(key: start_with('/')))
+    end
   end
 
   describe ".create_keypair_in" do
@@ -97,6 +110,23 @@ shared_examples "a CA" do
       }).to be true
     end
 
+    it 'should have keys/certs that start with "/" when it has no prefix' do
+      ca = described_class.create(ca_name, bucket_name)
+      ca.create_keypair('bar')
+
+      s3_objects = ca.output['resource']['aws_s3_bucket_object'].values
+
+      expect(s3_objects).to all(include(key: start_with('/')))
+    end
+
+    it 'should have keys/certs that start with "/" when it has a prefix' do
+      ca = described_class.create(ca_name, bucket_name, prefix: 'a_prefix')
+      ca.create_keypair('bar')
+
+      s3_objects = ca.output['resource']['aws_s3_bucket_object'].values
+
+      expect(s3_objects).to all(include(key: start_with('/')))
+    end
   end
 
   it "should be sortable" do

@@ -48,7 +48,7 @@ module Terrafying
           @ca_cert = options[:ca_cert]
           resource :aws_s3_bucket_object, "#{@name}-cert", {
                      bucket: @bucket,
-                     key: File.join(@prefix, @name, "ca.cert"),
+                     key: File.join('', @prefix, @name, "ca.cert"),
                      content: @ca_cert,
                      acl: cert_acl,
                    }
@@ -82,7 +82,7 @@ module Terrafying
 
         resource :aws_s3_bucket_object, "#{@name}-cert", {
                    bucket: @bucket,
-                   key: File.join(@prefix, @name, "ca.cert"),
+                   key: File.join('', @prefix, @name, "ca.cert"),
                    content: @ca_cert,
                    acl: cert_acl,
                  }
@@ -93,7 +93,7 @@ module Terrafying
       def keypair
         @ca_key_ref ||= resource :aws_s3_bucket_object, "#{@name}-key", {
                                    bucket: @bucket,
-                                   key: File.join(@prefix, @name, "ca.key"),
+                                   key: File.join('', @prefix, @name, "ca.key"),
                                    content: @ca_key,
                                  }
 
@@ -169,13 +169,13 @@ module Terrafying
 
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-key", {
                        bucket: @bucket,
-                       key: File.join(@prefix, @name, name, "${sha256(tls_private_key.#{key_ident}.private_key_pem)}", "key"),
+                       key: File.join('', @prefix, @name, name, "${sha256(tls_private_key.#{key_ident}.private_key_pem)}", "key"),
                        content: output_of(:tls_private_key, key_ident, :private_key_pem),
                      }
 
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert", {
                        bucket: @bucket,
-                       key: File.join(@prefix, @name, name, "${sha256(tls_locally_signed_cert.#{key_ident}.cert_pem)}", "cert"),
+                       key: File.join('', @prefix, @name, name, "${sha256(tls_locally_signed_cert.#{key_ident}.cert_pem)}", "cert"),
                        content: output_of(:tls_locally_signed_cert, key_ident, :cert_pem),
                      }
 
