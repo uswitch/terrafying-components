@@ -305,7 +305,8 @@ module Terrafying
           statistic: 'Minimum',
           alarm_description: "Monitoring #{name} target group host health",
           dimensions: dimensions,
-          alarm_actions: ['arn:aws:sns:eu-west-1:136393635417:prometheus_cloudwatch_topic']
+          alarm_actions: ['arn:aws:sns:eu-west-1:136393635417:prometheus_cloudwatch_topic'],
+          ok_actions: ['arn:aws:sns:eu-west-1:136393635417:prometheus_cloudwatch_topic'],
         }
       end
 
