@@ -25,6 +25,7 @@ module Terrafying
           common_name: name,
           organization: "uSwitch Limited",
           public_certificate: false,
+          curve: "P384",
         }.merge(options)
 
         @name = name
@@ -40,7 +41,7 @@ module Terrafying
           cert_acl = "private"
         end
 
-        @source = File.join("s3://", @bucket, @prefix, @name, "ca.cert")
+        @source = File.join("s3://", path("#{@name}-cert"))
 
         if options[:ca_key] && options[:ca_cert]
           @ca_key = options[:ca_key]
@@ -58,7 +59,7 @@ module Terrafying
 
         resource :tls_private_key, @ident, {
                    algorithm: @algorithm,
-                   ecdsa_curve: "P384",
+                   ecdsa_curve: options[:curve],
                  }
 
         resource :tls_self_signed_cert, @ident, {
@@ -90,11 +91,11 @@ module Terrafying
       end
 
       def keypair
-        resource :aws_s3_bucket_object, "#{@name}-key", {
-                   bucket: @bucket,
-                   key: File.join(@prefix, @name, "ca.key"),
-                   content: @ca_key,
-                 }
+        @ca_key_ref ||= resource :aws_s3_bucket_object, "#{@name}-key", {
+                                   bucket: @bucket,
+                                   key: File.join(@prefix, @name, "ca.key"),
+                                   content: @ca_key,
+                                 }
 
         {
           ca: self,
@@ -103,8 +104,8 @@ module Terrafying
             key: File.join("/etc/ssl", @name, "ca.key"),
           },
           source: {
-            cert: File.join("s3://", @bucket, @prefix, @name, "ca.cert"),
-            key: File.join("s3://", @bucket, @prefix, @name, "ca.key"),
+            cert: File.join("s3://", path("#{@name}-cert")),
+            key: File.join("s3://", path("#{@name}-key")),
           },
           resources: [
             "aws_s3_bucket_object.#{@name}-key",
@@ -117,8 +118,8 @@ module Terrafying
               "s3:GetObject",
             ],
             Resource: [
-              "arn:aws:s3:::#{File.join(@bucket, @prefix, @name, "ca.cert")}",
-              "arn:aws:s3:::#{File.join(@bucket, @prefix, @name, "ca.key")}",
+              "arn:aws:s3:::#{path(@name + '-cert')}",
+              "arn:aws:s3:::#{path(@name + '-key')}",
             ]
           }
         }
@@ -136,13 +137,14 @@ module Terrafying
           ],
           dns_names: [],
           ip_addresses: [],
+          curve: "P384",
         }.merge(options)
 
         key_ident = "#{@name}-#{tf_safe(name)}"
 
         ctx.resource :tls_private_key, key_ident, {
                        algorithm: @algorithm,
-                       ecdsa_curve: "P384",
+                       ecdsa_curve: options[:curve],
                      }
 
         ctx.resource :tls_cert_request, key_ident, {
@@ -167,17 +169,17 @@ module Terrafying
 
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-key", {
                        bucket: @bucket,
-                       key: File.join(@prefix, @name, name, "key"),
+                       key: File.join(@prefix, @name, name, "${sha256(tls_private_key.#{key_ident}.private_key_pem)}", "key"),
                        content: output_of(:tls_private_key, key_ident, :private_key_pem),
                      }
 
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert", {
                        bucket: @bucket,
-                       key: File.join(@prefix, @name, name, "cert"),
+                       key: File.join(@prefix, @name, name, "${sha256(tls_locally_signed_cert.#{key_ident}.cert_pem)}", "cert"),
                        content: output_of(:tls_locally_signed_cert, key_ident, :cert_pem),
                      }
 
-        reference_keypair(ctx, name)
+        reference_keypair(ctx, name, "#{key_ident}-key", "#{key_ident}-cert")
       end
 
     end

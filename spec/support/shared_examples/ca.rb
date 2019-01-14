@@ -21,12 +21,9 @@ shared_examples "a CA" do
   describe ".create" do
 
     it "should put the cert in s3" do
-      ca_cert = @ca.output["resource"]["aws_s3_bucket_object"].select { |_, obj|
-        obj[:key] == "/#{ca_name}/ca.cert" && obj[:bucket] == bucket_name
-      }
+      obj_paths = @ca.output["resource"]["aws_s3_bucket_object"].keys.map { |key| File.join("s3://", @ca.path(key)) }
 
-      expect(ca_cert.count).to eq(1)
-      expect(@ca.source).to eq("s3://#{bucket_name}/#{ca_name}/ca.cert")
+      expect(obj_paths).to include(@ca.source)
     end
 
     it "should populate name" do
@@ -77,31 +74,18 @@ shared_examples "a CA" do
     it "should reference the right bucket objects in output" do
       keypair = @ca.create_keypair("foo")
 
-      cert_object = @ca.output["resource"]["aws_s3_bucket_object"].select { |_, obj|
-        File.join("s3://", obj[:bucket], obj[:key]) == keypair[:source][:cert]
-      }.first
-      key_object = @ca.output["resource"]["aws_s3_bucket_object"].select { |_, obj|
-        File.join("s3://", obj[:bucket], obj[:key]) == keypair[:source][:key]
-      }.first
+      obj_paths = @ca.output["resource"]["aws_s3_bucket_object"].keys.map { |key| File.join("s3://", @ca.path(key)) }
 
-      expect(cert_object).to_not be nil
-      expect(key_object).to_not be nil
+      expect(obj_paths).to include(keypair[:source][:cert], keypair[:source][:key])
     end
 
     it "should reference the correct resources in the IAM statement" do
       keypair = @ca.create_keypair("foo")
 
-      objects = keypair[:iam_statement][:Resource].map { |arn|
-        path = arn.split(':::')[1]
+      obj_paths = @ca.output["resource"]["aws_s3_bucket_object"].keys.map { |key| @ca.path(key) }
+      iam_paths = keypair[:iam_statement][:Resource].map { |arn| arn.split(':::')[1] }
 
-        _, obj = @ca.output["resource"]["aws_s3_bucket_object"].select { |_, obj|
-          File.join(obj[:bucket], obj[:key]) == path
-        }.first
-
-        obj
-      }
-
-      expect(objects).to all( be_a Hash )
+      expect(obj_paths).to include( *iam_paths )
     end
 
     it "should reference resources that exist" do

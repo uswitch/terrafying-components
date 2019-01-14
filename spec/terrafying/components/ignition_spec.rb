@@ -215,9 +215,9 @@ RSpec.describe Terrafying::Components::Ignition, '#generate' do
       pair_key = files.find { |f| f[:path] == '/etc/ssl/great-ca/foo/key' }
       pair_crt = files.find { |f| f[:path] == '/etc/ssl/great-ca/foo/cert' }
 
-      expect(ca_crt[:contents][:source]).to eq('s3://some-bucket/great-ca/ca.cert')
-      expect(pair_key[:contents][:source]).to eq('s3://some-bucket/great-ca/foo/key')
-      expect(pair_crt[:contents][:source]).to eq('s3://some-bucket/great-ca/foo/cert')
+      expect(ca_crt[:contents][:source]).to eq(ca.source)
+      expect(pair_key[:contents][:source]).to eq(keypair[:source][:key])
+      expect(pair_crt[:contents][:source]).to eq(keypair[:source][:cert])
 
     end
 
@@ -235,8 +235,8 @@ RSpec.describe Terrafying::Components::Ignition, '#generate' do
       key = files.find { |f| f[:path] == '/etc/ssl/great-ca/ca.key' }
       crt = files.find { |f| f[:path] == '/etc/ssl/great-ca/ca.cert' }
 
-      expect(key[:contents][:source]).to eq('s3://some-bucket/great-ca/ca.key')
-      expect(crt[:contents][:source]).to eq('s3://some-bucket/great-ca/ca.cert')
+      expect(key[:contents][:source]).to eq(ca.keypair[:source][:key])
+      expect(crt[:contents][:source]).to eq(ca.keypair[:source][:cert])
     end
 
     it 'shouldnt duplicate the ca.cert' do

@@ -39,6 +39,7 @@ module Terrafying
           provider: :staging,
           email_address: "cloud@uswitch.com",
           public_certificate: false,
+          curve: "P384",
         }.merge(options)
 
         @name = name
@@ -50,7 +51,7 @@ module Terrafying
 
         resource :tls_private_key, "#{@name}-account", {
                    algorithm: "ECDSA",
-                   ecdsa_curve: "P384",
+                   ecdsa_curve: options[:curve],
                  }
 
         resource :acme_registration, "#{@name}-reg", {
@@ -80,7 +81,7 @@ module Terrafying
           acl: @ca_cert_acl
         }
 
-        @source = File.join("s3://", @bucket, @prefix, @name, "ca.cert")
+        @source = File.join("s3://", path("#{@name}-cert"))
 
         self
       end
@@ -98,13 +99,14 @@ module Terrafying
           dns_names: [],
           ip_addresses: [],
           min_days_remaining: 21,
+          curve: "P384",
         }.merge(options)
 
         key_ident = "#{@name}-#{tf_safe(name)}"
 
         ctx.resource :tls_private_key, key_ident, {
                        algorithm: "ECDSA",
-                       ecdsa_curve: "P384",
+                       ecdsa_curve: options[:curve],
                      }
 
         ctx.resource :tls_cert_request, key_ident, {
@@ -140,7 +142,7 @@ module Terrafying
                        content: output_of(:acme_certificate, key_ident, :certificate_pem).to_s + @ca_cert,
                      }
 
-        reference_keypair(ctx, name)
+        reference_keypair(ctx, name, "#{key_ident}-key", "#{key_ident}-cert")
       end
 
     end
