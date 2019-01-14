@@ -113,7 +113,7 @@ module Terrafying
           internal: !options[:public],
           tags: @tags,
         }.merge(subnets_for(options[:subnets]))
-         .merge(application? ? { security_groups: [@security_group], idle_timeout: options[:idle_timeout] } : {})
+         .merge(application? ? { security_groups: [@security_group], idle_timeout: options[:idle_timeout], access_logs: options[:access_logs] } : {})
          .compact
 
         @targets = []
