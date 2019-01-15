@@ -41,14 +41,14 @@ module Terrafying
           cert_acl = "private"
         end
 
-        @source = File.join("s3://", path("#{@name}-cert"))
+        @source = object_url(@name, :cert)
 
         if options[:ca_key] && options[:ca_cert]
           @ca_key = options[:ca_key]
           @ca_cert = options[:ca_cert]
           resource :aws_s3_bucket_object, "#{@name}-cert", {
                      bucket: @bucket,
-                     key: File.join('', @prefix, @name, "ca.cert"),
+                     key: object_key(@name, :cert),
                      content: @ca_cert,
                      acl: cert_acl,
                    }
@@ -80,9 +80,9 @@ module Terrafying
         @ca_key = output_of(:tls_private_key, @ident, :private_key_pem)
         @ca_cert = output_of(:tls_self_signed_cert, @ident, :cert_pem)
 
-        resource :aws_s3_bucket_object, "#{@name}-cert", {
+        resource :aws_s3_bucket_object, object_name(@name, :cert), {
                    bucket: @bucket,
-                   key: File.join('', @prefix, @name, "ca.cert"),
+                   key: object_key(@name, :cert),
                    content: @ca_cert,
                    acl: cert_acl,
                  }
@@ -91,7 +91,7 @@ module Terrafying
       end
 
       def keypair
-        @ca_key_ref ||= resource :aws_s3_bucket_object, "#{@name}-key", {
+        @ca_key_ref ||= resource :aws_s3_bucket_object, object_name(@name, :key), {
                                    bucket: @bucket,
                                    key: File.join('', @prefix, @name, "ca.key"),
                                    content: @ca_key,
@@ -104,12 +104,12 @@ module Terrafying
             key: File.join("/etc/ssl", @name, "ca.key"),
           },
           source: {
-            cert: File.join("s3://", path("#{@name}-cert")),
-            key: File.join("s3://", path("#{@name}-key")),
+            cert: object_url(@name, :cert),
+            key: object_url(@name, :key),
           },
           resources: [
-            "aws_s3_bucket_object.#{@name}-key",
-            "aws_s3_bucket_object.#{@name}-cert"
+            "aws_s3_bucket_object.#{object_name(@name, :key)}",
+            "aws_s3_bucket_object.#{object_name(@name, :cert)}"
           ],
           iam_statement: {
             Effect: "Allow",
@@ -118,8 +118,8 @@ module Terrafying
               "s3:GetObject",
             ],
             Resource: [
-              "arn:aws:s3:::#{path(@name + '-cert')}",
-              "arn:aws:s3:::#{path(@name + '-key')}",
+              object_arn(@name, :cert),
+              object_arn(@name, :key),
             ]
           }
         }
@@ -140,7 +140,7 @@ module Terrafying
           curve: "P384",
         }.merge(options)
 
-        key_ident = "#{@name}-#{tf_safe(name)}"
+        key_ident = object_ident(name)
 
         ctx.resource :tls_private_key, key_ident, {
                        algorithm: @algorithm,
@@ -167,19 +167,19 @@ module Terrafying
                        allowed_uses: options[:allowed_uses],
                      }
 
-        ctx.resource :aws_s3_bucket_object, "#{key_ident}-key", {
+        ctx.resource :aws_s3_bucket_object, object_name(name, :key), {
                        bucket: @bucket,
-                       key: File.join('', @prefix, @name, name, "${sha256(tls_private_key.#{key_ident}.private_key_pem)}", "key"),
+                       key: object_key(name, :key, "${sha256(tls_private_key.#{key_ident}.private_key_pem)}"),
                        content: output_of(:tls_private_key, key_ident, :private_key_pem),
                      }
 
-        ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert", {
+        ctx.resource :aws_s3_bucket_object, object_name(name, :cert), {
                        bucket: @bucket,
-                       key: File.join('', @prefix, @name, name, "${sha256(tls_locally_signed_cert.#{key_ident}.cert_pem)}", "cert"),
+                       key: object_key(name, :cert, "${sha256(tls_locally_signed_cert.#{key_ident}.cert_pem)}"),
                        content: output_of(:tls_locally_signed_cert, key_ident, :cert_pem),
                      }
 
-        reference_keypair(ctx, name, "#{key_ident}-key", "#{key_ident}-cert")
+        reference_keypair(ctx, name)
       end
 
     end
