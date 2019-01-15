@@ -9,11 +9,41 @@ module Terrafying
         create_keypair_in(self, name, options)
       end
 
-      def path(object)
-        output_of(:aws_s3_bucket_object, object, :bucket).to_s + output_of(:aws_s3_bucket_object, object, :key).to_s
+      def ca?(name)
+        name == @name
       end
 
-      def reference_keypair(ctx, name, key, cert)
+      def object_ident(name)
+        (ca? name) ? @name : "#{@name}-#{tf_safe(name)}"
+      end
+
+      def object_name(name, type)
+        "#{object_ident(name)}-#{type.to_s}"
+      end
+
+      def object_key(name, type, version='')
+        if (ca? name)
+          File.join('', @prefix, @name, "ca.#{type.to_s}")
+        else
+          raise "A non-ca object must have a version" if version.empty?
+          File.join('', @prefix, @name, name, version, type.to_s)
+        end
+      end
+
+      def object_arn(name, type, version="*")
+        key = object_key(name, type, version)
+
+        "arn:aws:s3:::#{@bucket}#{key}"
+      end
+
+      def object_url(name, type)
+        name = object_name(name, type)
+        key = output_of(:aws_s3_bucket_object, name, :key).to_s
+
+        File.join("s3://", "#{@bucket}#{key}")
+      end
+
+      def reference_keypair(ctx, name)
         ref = {
           name: name,
           ca: self,
@@ -22,12 +52,12 @@ module Terrafying
             key: File.join("/etc/ssl", @name, name, "key"),
           },
           source: {
-            cert: File.join("s3://", path(cert)),
-            key: File.join("s3://", path(key)),
+            cert: object_url(name, :cert),
+            key: object_url(name, :key),
           },
           resources: [
-            "aws_s3_bucket_object.#{key}",
-            "aws_s3_bucket_object.#{cert}"
+            "aws_s3_bucket_object.#{object_name(name, :key)}",
+            "aws_s3_bucket_object.#{object_name(name, :cert)}"
           ],
           iam_statement: {
             Effect: "Allow",
@@ -36,15 +66,15 @@ module Terrafying
               "s3:GetObject",
             ],
             Resource: [
-              "arn:aws:s3:::#{path(@name + '-cert')}",
-              "arn:aws:s3:::#{path(cert)}",
-              "arn:aws:s3:::#{path(key)}",
+              object_arn(@name, :cert),
+              object_arn(name, :cert),
+              object_arn(name, :key),
             ]
           }
         }
 
         if self == ctx
-          ref[:resources] << "aws_s3_bucket_object.#{@name}-cert"
+          ref[:resources] << "aws_s3_bucket_object.#{object_name(@name, :cert)}"
         end
 
         ref

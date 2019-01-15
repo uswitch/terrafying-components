@@ -21,9 +21,9 @@ shared_examples "a CA" do
   describe ".create" do
 
     it "should put the cert in s3" do
-      obj_paths = @ca.output["resource"]["aws_s3_bucket_object"].keys.map { |key| File.join("s3://", @ca.path(key)) }
-
-      expect(obj_paths).to include(@ca.source)
+      expect(@ca.output["resource"]["aws_s3_bucket_object"].values).to(
+        include(a_hash_including(bucket: bucket_name, key: @ca.object_key(@ca.name, :cert)))
+      )
     end
 
     it "should populate name" do
@@ -58,7 +58,7 @@ shared_examples "a CA" do
 
       expect(s3_objects).to all(include(key: start_with('/')))
     end
- 
+
     it 'should have keys/certs that start with "/" when it has a prefix' do
       ca = described_class.create(ca_name, bucket_name, prefix: 'a_prefix')
       s3_objects = ca.output['resource']['aws_s3_bucket_object'].values
@@ -87,18 +87,32 @@ shared_examples "a CA" do
     it "should reference the right bucket objects in output" do
       keypair = @ca.create_keypair("foo")
 
-      obj_paths = @ca.output["resource"]["aws_s3_bucket_object"].keys.map { |key| File.join("s3://", @ca.path(key)) }
-
-      expect(obj_paths).to include(keypair[:source][:cert], keypair[:source][:key])
+      expect(@ca.output["resource"]["aws_s3_bucket_object"].values).to(
+        include(
+          a_hash_including(bucket: bucket_name, key: match(@ca.object_key(keypair[:name], :key, ".*"))),
+          a_hash_including(bucket: bucket_name, key: match(@ca.object_key(keypair[:name], :cert, ".*")))
+        )
+      )
     end
 
     it "should reference the correct resources in the IAM statement" do
       keypair = @ca.create_keypair("foo")
 
-      obj_paths = @ca.output["resource"]["aws_s3_bucket_object"].keys.map { |key| @ca.path(key) }
-      iam_paths = keypair[:iam_statement][:Resource].map { |arn| arn.split(':::')[1] }
+      arns = keypair[:iam_statement][:Resource]
 
-      expect(obj_paths).to include( *iam_paths )
+      expect(arns).to include(
+                        @ca.object_arn(@ca.name, :cert),
+                        @ca.object_arn(keypair[:name], :cert),
+                        @ca.object_arn(keypair[:name], :key),
+                      )
+    end
+
+    it "arn function outputs a correct arn" do
+      expect(@ca.object_arn("asd", :cert)).to match("arn:aws:s3:::#{bucket_name}/#{@ca.name}/asd/*/cert")
+    end
+
+    it "arn function outputs a correct arn for a CA" do
+      expect(@ca.object_arn(@ca.name, :cert)).to match("arn:aws:s3:::#{bucket_name}/#{@ca.name}/ca.cert")
     end
 
     it "should reference resources that exist" do

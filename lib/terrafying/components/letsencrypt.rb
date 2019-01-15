@@ -74,14 +74,14 @@ module Terrafying
           @ca_cert = cert.read
         end
 
-        resource :aws_s3_bucket_object, "#{@name}-cert", {
+        resource :aws_s3_bucket_object, object_name(@name, :cert), {
           bucket: @bucket,
-          key: File.join('', @prefix, @name, "ca.cert"),
+          key: object_key(@name, :cert),
           content: @ca_cert,
           acl: @ca_cert_acl
         }
 
-        @source = File.join("s3://", path("#{@name}-cert"))
+        @source = object_url(@name, :cert)
 
         self
       end
@@ -142,7 +142,7 @@ module Terrafying
                        content: output_of(:acme_certificate, key_ident, :certificate_pem).to_s + @ca_cert,
                      }
 
-        reference_keypair(ctx, name, "#{key_ident}-key", "#{key_ident}-cert")
+        reference_keypair(ctx, name)
       end
 
     end
