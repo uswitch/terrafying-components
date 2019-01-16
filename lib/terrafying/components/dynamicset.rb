@@ -228,6 +228,7 @@ module Terrafying
               MaxBatchSize: "#{instances[:desired]}",
               PauseTime: "PT10M",
               WaitOnResourceSignals: true,
+              SuspendProcesses: %w[HealthCheck ReplaceUnhealthy AZRebalance AlarmNotification ScheduledActions],
             }
           }
         elsif rolling_update
@@ -235,7 +236,8 @@ module Terrafying
             AutoScalingRollingUpdate: {
               MinInstancesInService: "#{instances[:min]}",
               MaxBatchSize: "1",
-              PauseTime: "PT0S"
+              PauseTime: "PT0S",
+              SuspendProcesses: %w[HealthCheck ReplaceUnhealthy AZRebalance AlarmNotification ScheduledActions],
             }
           }
         end
