@@ -191,8 +191,7 @@ module Terrafying
       end
 
       def subnets_for(subnets)
-        return { subnets: subnets.map(&:id) } if application?
-        { subnet_mapping: subnets.map { |subnet| { subnet_id: subnet.id } } }
+        return { subnets: subnets.map(&:id) }
       end
 
       def network?
