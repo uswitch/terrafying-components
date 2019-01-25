@@ -28,7 +28,7 @@ module Terrafying
 
     class VPN < Terrafying::Context
 
-      attr_reader :name, :cidr
+      attr_reader :name, :cidr, :service, :ip_address
 
       def self.create_in(vpc, name, provider, options={})
         VPN.new.create_in vpc, name, provider, options
@@ -46,6 +46,7 @@ module Terrafying
           subnets: vpc.subnets.fetch(:public, []),
           static: false,
           route_all_traffic: false,
+          route_dns_entries: [],
           units: [],
           tags: {},
           service: {},
@@ -68,7 +69,7 @@ module Terrafying
 
         units = [
           openvpn_service,
-          openvpn_authz_service(options[:route_all_traffic]),
+          openvpn_authz_service(options[:route_all_traffic], options[:route_dns_entries]),
           caddy_service(options[:ca])
         ]
         files = [
@@ -98,10 +99,11 @@ module Terrafying
           instances = [{}]
         end
 
+        @is_public = options[:public]
         @service = add! Service.create_in(
                           vpc, name,
                           {
-                            public: options[:public],
+                            public: @is_public,
                             ports: [22, 443, { number: 1194, type: "udp" }],
                             tags: options[:tags],
                             units: units + options[:units],
@@ -122,7 +124,38 @@ module Terrafying
                             ],
                           }.merge(options[:service])
                         )
+
+        @ip_address = @service.instance_set.instances[0].ip_address
+
         self
+      end
+
+      def allow_security_group_in(vpc, name: "")
+        name = "allow-#{@vpc.name}-vpn".downcase if name.empty?
+
+        ingress_rules = [
+          {
+            from_port: 0,
+            to_port: 0,
+            protocol: -1,
+            security_groups: [ @service.egress_security_group ],
+          },
+        ]
+
+        if @is_public
+          ingress_rules << {
+            from_port: 0,
+            to_port: 0,
+            protocol: -1,
+            cidr_blocks: [ "#{@ip_address}/32" ],
+          }
+        end
+
+        resource :aws_security_group, tf_safe("#{name}-#{vpc.name}"), {
+               name: name,
+               vpc_id: vpc.id,
+               ingress: ingress_rules,
+             }
       end
 
       def openvpn_service
@@ -140,15 +173,19 @@ module Terrafying
         )
       end
 
-      def openvpn_authz_service(route_all_traffic)
+      def openvpn_authz_service(route_all_traffic, route_dns_entry)
         optional_arguments = []
 
         if route_all_traffic
           optional_arguments << "--route-all"
         end
 
+        if route_dns_entry.count > 0
+          optional_arguments = optional_arguments + route_dns_entry.map { |entry| "--route-dns-entries #{entry}" }
+        end
+
         Ignition.container_unit(
-          "openvpn-authz", "quay.io/uswitch/openvpn-authz:1.1",
+          "openvpn-authz", "quay.io/uswitch/openvpn-authz:1.2",
           {
             host_networking: true,
             volumes: [
