@@ -68,4 +68,48 @@ RSpec.describe Terrafying::Components::VPN do
     end
   end
 
+  context "route_dns_entries" do
+
+    it "there shouldnt be any domains by default" do
+      vpn = Terrafying::Components::VPN.create_in(
+        @vpc, "foo", { type: "none" },
+      )
+
+      output = vpn.output_with_children
+
+      vpn_instance = output["resource"]["aws_instance"].values.first
+      vpn_user_data = JSON.parse(vpn_instance[:user_data], { symbolize_names: true })
+
+      proxy_unit = vpn_user_data[:systemd][:units].select { |unit| unit[:name] == "openvpn-authz.service" }.first
+
+      expect(proxy_unit[:contents]).to_not include("--route-dns-entries")
+    end
+
+    it "there shouldnt be any domains by default" do
+      vpn = Terrafying::Components::VPN.create_in(
+        @vpc, "foo", { type: "none" }, {
+          route_dns_entries: [
+            "wibble.com",
+            "bibble.com",
+          ]
+        },
+      )
+
+      output = vpn.output_with_children
+
+      vpn_instance = output["resource"]["aws_instance"].values.first
+      vpn_user_data = JSON.parse(vpn_instance[:user_data], { symbolize_names: true })
+
+      proxy_unit = vpn_user_data[:systemd][:units].select { |unit| unit[:name] == "openvpn-authz.service" }.first
+
+      expect(proxy_unit[:contents]).to(
+        include(
+          "--route-dns-entries wibble.com",
+          "--route-dns-entries bibble.com",
+        )
+      )
+    end
+
+  end
+
 end
