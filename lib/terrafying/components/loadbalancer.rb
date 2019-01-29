@@ -71,7 +71,8 @@ module Terrafying
           subnets: vpc.subnets.fetch(:private, []),
           hex_ident: false,
           idle_timeout: nil,
-          tags: {}
+          tags: {},
+          security_groups: [],
         }.merge(options)
 
         @tags = {
@@ -107,13 +108,17 @@ module Terrafying
           path_mtu_setup!
         end
 
+        if network? && options[:security_groups].count > 0
+          raise "You cannot set security groups on a network loadbalancer, set them on the instances behind it."
+        end
+
         @id = resource :aws_lb, ident, {
           name: ident,
           load_balancer_type: type,
           internal: !options[:public],
           tags: @tags,
         }.merge(subnets_for(options[:subnets]))
-         .merge(application? ? { security_groups: [@security_group], idle_timeout: options[:idle_timeout], access_logs: options[:access_logs] } : {})
+         .merge(application? ? { security_groups: [@security_group] + options[:security_groups], idle_timeout: options[:idle_timeout], access_logs: options[:access_logs] } : {})
          .compact
 
         @targets = []
