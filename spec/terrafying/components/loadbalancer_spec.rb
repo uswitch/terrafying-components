@@ -125,6 +125,22 @@ RSpec.describe Terrafying::Components::LoadBalancer do
       )
     end
 
+    it 'should apply security_groups' do
+      lb = Terrafying::Components::LoadBalancer.create_in(
+        @vpc, 'test-alb',
+        ports: [{ type: 'https', number: 443, ssl_certificate: 'some-arn' }],
+        security_groups: ["sg-000"],
+      )
+
+      lb_resource = lb.output_with_children['resource']['aws_lb'].values.first
+
+      expect(lb_resource).to include(
+        security_groups: a_collection_including(
+          "sg-000",
+        )
+      )
+    end
+
     context('ssl certificates') do
       it('should use the first cert passed as a string') do
         lb = Terrafying::Components::LoadBalancer.create_in(
@@ -295,6 +311,19 @@ RSpec.describe Terrafying::Components::LoadBalancer do
       lb_resource = lb.output_with_children['resource']['aws_lb'].values.first
 
       expect(lb_resource.keys).to not_include(:idle_timeout)
+    end
+
+    it 'should raise an exception if you try and set security groups' do
+      expect {
+        Terrafying::Components::LoadBalancer.create_in(
+          @vpc, "foo", {
+            ports: [
+              { type: "tcp", number: 1234 },
+            ],
+            security_groups: [ "sg-000" ],
+          }
+        )
+      }.to raise_error RuntimeError
     end
   end
 end
