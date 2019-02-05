@@ -312,18 +312,19 @@ RSpec.describe Terrafying::Components::LoadBalancer do
 
       expect(lb_resource.keys).to not_include(:idle_timeout)
     end
+    it 'should warn if you try and set security groups' do
+      expect_any_instance_of(Terrafying::Components::LoadBalancer).to receive(:warn).with(
+        matching("You cannot set security groups on a network loadbalancer, set them on the instances behind it.")
+      ).at_least(:once)
 
-    it 'should raise an exception if you try and set security groups' do
-      expect {
-        Terrafying::Components::LoadBalancer.create_in(
-          @vpc, "foo", {
-            ports: [
-              { type: "tcp", number: 1234 },
-            ],
-            security_groups: [ "sg-000" ],
-          }
-        )
-      }.to raise_error RuntimeError
+      described_class.create_in(
+        @vpc, "foo", {
+          ports: [
+            { type: "tcp", number: 1234 },
+          ],
+          security_groups: [ "sg-000" ],
+        }
+      )
     end
   end
 end

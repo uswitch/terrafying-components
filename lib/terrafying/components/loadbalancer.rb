@@ -109,7 +109,7 @@ module Terrafying
         end
 
         if network? && options[:security_groups].count > 0
-          raise "You cannot set security groups on a network loadbalancer, set them on the instances behind it."
+          warn "You cannot set security groups on a network loadbalancer, set them on the instances behind it."
         end
 
         @id = resource :aws_lb, ident, {
