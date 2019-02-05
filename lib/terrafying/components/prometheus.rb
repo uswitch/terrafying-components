@@ -20,7 +20,7 @@ module Terrafying
       def initialize(
         vpc:,
         thanos_name: 'thanos',
-        thanos_version: 'master-2018-10-29-8f247d6',
+        thanos_version: 'v0.2.1',
         prom_name: 'prometheus',
         prom_version: 'v2.4.3'
       )
