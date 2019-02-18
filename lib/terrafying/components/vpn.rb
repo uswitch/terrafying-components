@@ -207,7 +207,7 @@ module Terrafying
 
       def oauth2_proxy_service(oauth2_provider)
         Ignition.container_unit(
-          'authnz', 'registry.usw.co/cloud/authnz-http-proxy:0.1',
+          'authnz', 'quay.io/uswitch/authnz-http-proxy:0.1',
           {
             host_networking: true,
             arguments: [
