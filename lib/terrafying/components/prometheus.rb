@@ -20,9 +20,9 @@ module Terrafying
       def initialize(
         vpc:,
         thanos_name: 'thanos',
-        thanos_version: 'v0.2.1',
+        thanos_version: 'v0.3.1',
         prom_name: 'prometheus',
-        prom_version: 'v2.4.3'
+        prom_version: 'v2.7.1'
       )
         super()
         @vpc = vpc
@@ -131,7 +131,7 @@ module Terrafying
               -v /opt/prometheus:/opt/prometheus \
               quay.io/prometheus/prometheus:#{@prom_version} \
               --storage.tsdb.path=/opt/prometheus/data \
-              --storage.tsdb.retention=1d \
+              --storage.tsdb.retention.time=1d \
               --storage.tsdb.min-block-duration=2h \
               --storage.tsdb.max-block-duration=2h \
               --config.file=/opt/prometheus/prometheus.yml \
