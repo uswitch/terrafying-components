@@ -1,7 +1,7 @@
 FROM ruby:2.5-alpine3.7
 
 ARG TERRAFYING_VERSION=0.0.0
-ENV TERRAFORM_VERSION=0.11.8
+ENV TERRAFORM_VERSION=0.11.11
 
 RUN wget -O terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip \
  && unzip terraform.zip \
