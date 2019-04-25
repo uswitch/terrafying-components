@@ -23,10 +23,12 @@ module Terrafying
       def setup_providers
         {
           staging: {
+            url: 'https://acme-staging-v02.api.letsencrypt.org/directory',
             ref: provider(:acme, alias: :staging, server_url: 'https://acme-staging-v02.api.letsencrypt.org/directory'),
             ca_cert: 'https://letsencrypt.org/certs/fakeleintermediatex1.pem'
           },
           live: {
+            url: 'https://acme-v02.api.letsencrypt.org/directory',
             ref: provider(:acme, alias: :live, server_url: 'https://acme-v02.api.letsencrypt.org/directory'),
             ca_cert: 'https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt'
           }
@@ -50,8 +52,7 @@ module Terrafying
         provider :tls, {}
 
         resource :tls_private_key, "#{@name}-account", {
-                   algorithm: "ECDSA",
-                   ecdsa_curve: options[:curve],
+                   algorithm: "RSA",
                  }
 
         resource :acme_registration, "#{@name}-reg", {
@@ -66,6 +67,16 @@ module Terrafying
           bucket: @bucket,
           key: File.join('', @prefix, @name, "account.key"),
           content: @account_key,
+        }
+
+        resource :aws_s3_bucket_object, "#{@name}-config", {
+          bucket: @bucket,
+          key: File.join('', @prefix, @name, "config.json"),
+          content: {
+            id: output_of(:acme_registration, "#{@name}-reg", "id"),
+            url: @acme_provider[:url],
+            email_address: options[:email_address],
+          }.to_json,
         }
 
         @ca_cert_acl = options[:public_certificate] ? 'public-read' : 'private'
@@ -90,15 +101,8 @@ module Terrafying
         options = {
           common_name: name,
           organization: "uSwitch Limited",
-          validity_in_hours: 24 * 365,
-          allowed_uses: [
-            "nonRepudiation",
-            "digitalSignature",
-            "keyEncipherment"
-          ],
           dns_names: [],
           ip_addresses: [],
-          min_days_remaining: 21,
           curve: "P384",
         }.merge(options)
 
@@ -123,7 +127,7 @@ module Terrafying
         ctx.resource :acme_certificate, key_ident, {
                        provider: @acme_provider[:ref],
                        account_key_pem: @account_key,
-                       min_days_remaining: options[:min_days_remaining],
+                       min_days_remaining: 0, # the lambda will take over renewal
                        dns_challenge: {
                          provider: "route53",
                        },
@@ -132,14 +136,21 @@ module Terrafying
 
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-key", {
                        bucket: @bucket,
-                       key: File.join('', @prefix, @name, name, "${sha256(tls_private_key.#{key_ident}.private_key_pem)}", "key"),
+                       key: File.join('', @prefix, @name, name, "key"),
                        content: output_of(:tls_private_key, key_ident, :private_key_pem),
+                     }
+
+        ctx.resource :aws_s3_bucket_object, "#{key_ident}-csr", {
+                       bucket: @bucket,
+                       key: File.join('', @prefix, @name, name, "csr"),
+                       content: output_of(:tls_cert_request, key_ident, :cert_request_pem),
                      }
 
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert", {
                        bucket: @bucket,
-                       key: File.join('', @prefix, @name, name, "${sha256(acme_certificate.#{key_ident}.certificate_pem)}", "cert"),
+                       key: File.join('', @prefix, @name, name, "cert"),
                        content: output_of(:acme_certificate, key_ident, :certificate_pem).to_s + @ca_cert,
+                       lifecycle: { ignore_changes: [ "content" ] }, # the lambda will be updating it
                      }
 
         reference_keypair(ctx, name)
