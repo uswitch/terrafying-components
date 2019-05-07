@@ -171,7 +171,8 @@ module Terrafying
               --prometheus.url=http://prometheus:9090 \
               --tsdb.path=/opt/prometheus/data \
               --objstore.config-file=/opt/thanos/bucket.yml \
-              --log.level=warn
+              --log.level=warn \
+              --no-cluster.disable
             Restart=always
             RestartSec=30
           THANOS_SIDE
@@ -240,7 +241,8 @@ module Terrafying
               --cluster.advertise-address=$${COREOS_EC2_IPV4_LOCAL}:10900 \
               --grpc-advertise-address=$${COREOS_EC2_IPV4_LOCAL}:10901 \
               --query.replica-label=replica \
-              --log.level=warn
+              --log.level=warn \
+              --no-cluster.disable
             Restart=always
             RestartSec=30
           THANOS_UNIT
