@@ -100,7 +100,7 @@ EOF
           raise "All files require the following keys: #{FILE_REQUIRED_KEYS}"
         end
 
-        options[:cas] = options[:keypairs].map { |kp| kp[:ca] }.sort.uniq
+        options[:cas] = options[:keypairs].map { |kp| kp[:ca] }.compact.sort.uniq
 
         erb_path = File.join(File.dirname(__FILE__), "templates/ignition.yaml")
         erb = ERB.new(IO.read(erb_path))
