@@ -36,14 +36,14 @@ module Terrafying
 
       def default_tags
         {
-          name:          'tagset_name',
-          instance_id:   'instance_id',
+          name: 'tagset_name',
+          instance_id: 'instance_id',
           instance_type: 'instance_type',
-          private_ip:    'private_ip',
-          az:            'availability_zone',
-          vpc_id:        'vpc_id',
-          ami_id:        'image_id',
-          account_id:    'account_id'
+          private_ip: 'private_ip',
+          az: 'availability_zone',
+          vpc_id: 'vpc_id',
+          ami_id: 'image_id',
+          account_id: 'account_id'
         }
       end
 

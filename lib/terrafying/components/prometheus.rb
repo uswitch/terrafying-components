@@ -74,14 +74,13 @@ module Terrafying
 
       def allow_thanos_gossip(security_group)
         rule_ident = Digest::SHA2.hexdigest("#{security_group}-thanos-#{@vpc.name}")[0..24]
-        resource :aws_security_group_rule, rule_ident, {
-          security_group_id: security_group,
-          type:      'ingress',
-          from_port: 10900,
-          to_port:   10902,
-          protocol:  'tcp',
-          cidr_blocks: [@vpc.cidr]
-        }
+        resource :aws_security_group_rule, rule_ident,
+                 security_group_id: security_group,
+                 type: 'ingress',
+                 from_port: 10_900,
+                 to_port: 10_902,
+                 protocol: 'tcp',
+                 cidr_blocks: [@vpc.cidr]
       end
 
       def create_thanos(thanos_peers)
@@ -89,17 +88,17 @@ module Terrafying
           @vpc, @thanos_name,
           ports: [
             {
-              number: 10902,
+              number: 10_902,
               health_check: {
                 path: '/status',
                 protocol: 'HTTP'
               }
             },
             {
-              number: 10901
+              number: 10_901
             },
             {
-              number: 10900
+              number: 10_900
             }
           ],
           instance_type: 't3.medium',
@@ -296,35 +295,32 @@ module Terrafying
       end
 
       def cloudwatch_alarm(name, namespace, dimensions)
-        resource 'aws_cloudwatch_metric_alarm', name, {
-          alarm_name: name,
-          comparison_operator: 'GreaterThanOrEqualToThreshold',
-          evaluation_periods: '1',
-          metric_name: 'UnHealthyHostCount',
-          namespace: namespace,
-          period: '180',
-          threshold: '1',
-          statistic: 'Minimum',
-          alarm_description: "Monitoring #{name} target group host health",
-          dimensions: dimensions,
-          alarm_actions: ['arn:aws:sns:eu-west-1:136393635417:prometheus_cloudwatch_topic'],
-          ok_actions: ['arn:aws:sns:eu-west-1:136393635417:prometheus_cloudwatch_topic'],
-        }
+        resource 'aws_cloudwatch_metric_alarm', name,
+                 alarm_name: name,
+                 comparison_operator: 'GreaterThanOrEqualToThreshold',
+                 evaluation_periods: '1',
+                 metric_name: 'UnHealthyHostCount',
+                 namespace: namespace,
+                 period: '180',
+                 threshold: '1',
+                 statistic: 'Minimum',
+                 alarm_description: "Monitoring #{name} target group host health",
+                 dimensions: dimensions,
+                 alarm_actions: ['arn:aws:sns:eu-west-1:136393635417:prometheus_cloudwatch_topic'],
+                 ok_actions: ['arn:aws:sns:eu-west-1:136393635417:prometheus_cloudwatch_topic']
       end
 
       def create_prometheus_cloudwatch_alert(service)
-        cloudwatch_alarm service.name, 'AWS/ApplicationELB', {
-          LoadBalancer: output_of('aws_lb', service.load_balancer.name, 'arn_suffix'),
-          TargetGroup: service.load_balancer.targets.first.target_group.to_s.gsub(/id/, 'arn_suffix')
-        }
+        cloudwatch_alarm service.name, 'AWS/ApplicationELB',
+                         LoadBalancer: output_of('aws_lb', service.load_balancer.name, 'arn_suffix'),
+                         TargetGroup: service.load_balancer.targets.first.target_group.to_s.gsub(/id/, 'arn_suffix')
       end
 
       def create_thanos_cloudwatch_alert(service)
         service.load_balancer.targets.each_with_index do |target, i|
-          cloudwatch_alarm "#{service.name}_#{i}", 'AWS/NetworkELB', {
-            LoadBalancer: output_of('aws_lb', service.load_balancer.name, 'arn_suffix'),
-            TargetGroup: target.target_group.to_s.gsub(/id/, 'arn_suffix')
-          }
+          cloudwatch_alarm "#{service.name}_#{i}", 'AWS/NetworkELB',
+                           LoadBalancer: output_of('aws_lb', service.load_balancer.name, 'arn_suffix'),
+                           TargetGroup: target.target_group.to_s.gsub(/id/, 'arn_suffix')
         end
       end
     end

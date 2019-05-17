@@ -1,11 +1,9 @@
+# frozen_string_literal: true
 
 module Terrafying
-
   module Components
-
     module CA
-
-      def create_keypair(name, options={})
+      def create_keypair(name, options = {})
         create_keypair_in(self, name, options)
       end
 
@@ -18,19 +16,20 @@ module Terrafying
       end
 
       def object_name(name, type)
-        "#{object_ident(name)}-#{type.to_s}"
+        "#{object_ident(name)}-#{type}"
       end
 
-      def object_key(name, type, version='')
-        if (ca? name)
-          File.join('', @prefix, @name, "ca.#{type.to_s}")
+      def object_key(name, type, version = '')
+        if ca? name
+          File.join('', @prefix, @name, "ca.#{type}")
         else
-          raise "A non-ca object must have a version" if version.empty?
+          raise 'A non-ca object must have a version' if version.empty?
+
           File.join('', @prefix, @name, name, version, type.to_s)
         end
       end
 
-      def object_arn(name, type, version="*")
+      def object_arn(name, type, version = '*')
         key = object_key(name, type, version)
 
         "arn:aws:s3:::#{@bucket}#{key}"
@@ -40,7 +39,7 @@ module Terrafying
         name = object_name(name, type)
         key = output_of(:aws_s3_bucket_object, name, :key).to_s
 
-        File.join("s3://", "#{@bucket}#{key}")
+        File.join('s3://', "#{@bucket}#{key}")
       end
 
       def reference_keypair(ctx, name)
@@ -48,27 +47,27 @@ module Terrafying
           name: name,
           ca: self,
           path: {
-            cert: File.join("/etc/ssl", @name, name, "cert"),
-            key: File.join("/etc/ssl", @name, name, "key"),
+            cert: File.join('/etc/ssl', @name, name, 'cert'),
+            key: File.join('/etc/ssl', @name, name, 'key')
           },
           source: {
             cert: object_url(name, :cert),
-            key: object_url(name, :key),
+            key: object_url(name, :key)
           },
           resources: [
             "aws_s3_bucket_object.#{object_name(name, :key)}",
             "aws_s3_bucket_object.#{object_name(name, :cert)}"
           ],
           iam_statement: {
-            Effect: "Allow",
+            Effect: 'Allow',
             Action: [
-              "s3:GetObjectAcl",
-              "s3:GetObject",
+              's3:GetObjectAcl',
+              's3:GetObject'
             ],
             Resource: [
               object_arn(@name, :cert),
               object_arn(name, :cert),
-              object_arn(name, :key),
+              object_arn(name, :key)
             ]
           }
         }
@@ -83,9 +82,6 @@ module Terrafying
       def <=>(other)
         @name <=> other.name
       end
-
     end
-
   end
-
 end

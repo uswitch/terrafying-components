@@ -12,7 +12,6 @@ def provider_matching(ctx, type, name)
   providers_matching(ctx, type, name).first
 end
 
-
 RSpec.describe Terrafying::Components::LetsEncrypt do
   it_behaves_like 'a CA'
 end

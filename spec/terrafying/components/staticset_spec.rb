@@ -1,47 +1,47 @@
+# frozen_string_literal: true
+
 require 'terrafying'
 require 'terrafying/components/staticset'
 
 RSpec::Matchers.define_negated_matcher :not_have_key, :have_key
 
 RSpec.describe Terrafying::Components::StaticSet do
-
-  it_behaves_like "a usable resource"
+  it_behaves_like 'a usable resource'
 
   before do
-    @vpc = stub_vpc("a-vpc", "10.0.0.0/16")
+    @vpc = stub_vpc('a-vpc', '10.0.0.0/16')
   end
 
-  it "should create the correct number of instances" do
+  it 'should create the correct number of instances' do
     instances = [{}, {}, {}]
     set = Terrafying::Components::StaticSet.create_in(
-      @vpc, "foo", {
-        instances: instances,
-      }
+      @vpc, 'foo',
+      instances: instances
     )
 
     output = set.output_with_children
 
-    expect(output["resource"]["aws_instance"].count).to eq(instances.count)
+    expect(output['resource']['aws_instance'].count).to eq(instances.count)
   end
 
-  it "should create volumes for each instance based on spec" do
+  it 'should create volumes for each instance based on spec' do
     instances = [{}, {}]
     volumes = [
       {
         size: 100,
-        device: "/dev/xvdl",
-        mount: "/mnt/data",
-      },
+        device: '/dev/xvdl',
+        mount: '/mnt/data'
+      }
     ]
 
     set = Terrafying::Components::StaticSet.create_in(
-      @vpc, "foo", { instances: instances, volumes: volumes },
+      @vpc, 'foo', instances: instances, volumes: volumes
     )
 
     output = set.output_with_children
 
-    expect(output["resource"]["aws_ebs_volume"].count).to eq(instances.count * volumes.count)
-    expect(output["resource"]["aws_volume_attachment"].count).to eq(instances.count * volumes.count)
+    expect(output['resource']['aws_ebs_volume'].count).to eq(instances.count * volumes.count)
+    expect(output['resource']['aws_volume_attachment'].count).to eq(instances.count * volumes.count)
   end
 
   it 'should have no kms_key_id key' do
@@ -50,12 +50,12 @@ RSpec.describe Terrafying::Components::StaticSet do
       {
         size: 100,
         device: '/dev/xvdl',
-        mount:  '/mnt/data'
+        mount: '/mnt/data'
       }
     ]
 
     set = Terrafying::Components::StaticSet.create_in(
-      @vpc, 'foo', { instances: instances, volumes: volumes }
+      @vpc, 'foo', instances: instances, volumes: volumes
     )
 
     volumes = set.output_with_children['resource']['aws_ebs_volume'].values
@@ -71,43 +71,43 @@ RSpec.describe Terrafying::Components::StaticSet do
       {
         size: 100,
         device: '/dev/xvdl',
-        mount:  '/mnt/data',
-        encrypted:  true,
+        mount: '/mnt/data',
+        encrypted: true,
         kms_key_id: 'my_key_id'
       }
     ]
 
     set = Terrafying::Components::StaticSet.create_in(
-      @vpc, 'foo', { instances: instances, volumes: volumes }
+      @vpc, 'foo', instances: instances, volumes: volumes
     )
 
     volumes = set.output_with_children['resource']['aws_ebs_volume'].values
 
     expect(volumes).to include(
-      a_hash_including({
+      a_hash_including(
         encrypted: true,
         kms_key_id: 'my_key_id'
-      })
+      )
     )
   end
 
-  it "should setup security group rules for instances to talk to each other on" do
+  it 'should setup security group rules for instances to talk to each other on' do
     ports = [80, 443]
     set = Terrafying::Components::StaticSet.create_in(
-      @vpc, "foo", { ports: ports }
+      @vpc, 'foo', ports: ports
     )
 
-    rules = set.output_with_children["resource"]["aws_security_group_rule"].values
+    rules = set.output_with_children['resource']['aws_security_group_rule'].values
 
     port_rules = rules.select { |rule| ports.include?(rule[:from_port]) }
 
     expect(port_rules.count).to eq(ports.count)
-    expect(port_rules.all? {|r| r[:self]}).to be true
+    expect(port_rules.all? { |r| r[:self] }).to be true
   end
 
   context 'security_groups' do
     it 'should define no rules directly on the egress group' do
-      set = described_class.create_in(@vpc, "foo")
+      set = described_class.create_in(@vpc, 'foo')
 
       rules = set.output['resource']['aws_security_group']['a-vpc-foo']
 
@@ -115,7 +115,7 @@ RSpec.describe Terrafying::Components::StaticSet do
     end
 
     it 'should add a default egress rule to 0.0.0.0/0' do
-      set = described_class.create_in(@vpc, "foo")
+      set = described_class.create_in(@vpc, 'foo')
 
       rules = set.output['resource']['aws_security_group_rule'].values
 
@@ -126,7 +126,7 @@ RSpec.describe Terrafying::Components::StaticSet do
           from_port: 0,
           to_port: 0,
           protocol: -1,
-          cidr_blocks: ['0.0.0.0/0'],
+          cidr_blocks: ['0.0.0.0/0']
         )
       )
     end

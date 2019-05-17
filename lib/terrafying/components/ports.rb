@@ -1,10 +1,11 @@
+# frozen_string_literal: true
 
 PORT_NAMES = {
-  22 => "ssh",
-  80 => "http",
-  443 => "https",
-  1194 => "openvpn",
-}
+  22 => 'ssh',
+  80 => 'http',
+  443 => 'https',
+  1194 => 'openvpn'
+}.freeze
 
 def enrich_ports(ports)
   ports = add_upstream_downstream(ports)
@@ -14,9 +15,7 @@ end
 
 def add_upstream_downstream(ports)
   ports.map do |port|
-    if port.is_a?(Numeric)
-      port = { upstream_port: port, downstream_port: port }
-    end
+    port = { upstream_port: port, downstream_port: port } if port.is_a?(Numeric)
 
     if port.key?(:number)
       port[:upstream_port] = port[:number]
@@ -53,18 +52,20 @@ def add_names(ports)
   ports.map do |port|
     {
       type: 'tcp',
-      name: PORT_NAMES.fetch(port[:upstream_port], port[:upstream_port].to_s),
+      name: PORT_NAMES.fetch(port[:upstream_port], port[:upstream_port].to_s)
     }.merge(port)
   end
 end
 
 def from_port(port)
   return port unless port_range?(port)
+
   port.split('-').first.to_i
 end
 
 def to_port(port)
   return port unless port_range?(port)
+
   port.split('-').last.to_i
 end
 
@@ -73,9 +74,9 @@ def port_range?(port)
 end
 
 def is_l4_port(port)
-  port[:type] == "tcp" || port[:type] == "udp"
+  port[:type] == 'tcp' || port[:type] == 'udp'
 end
 
 def is_l7_port(port)
-  port[:type] == "http" || port[:type] == "https"
+  port[:type] == 'http' || port[:type] == 'https'
 end
