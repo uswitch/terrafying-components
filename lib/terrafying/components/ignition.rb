@@ -88,8 +88,8 @@ module Terrafying
           raise "All units require the following keys: #{UNIT_REQUIRED_KEYS}"
         end
 
-        unless options[:units].all? { |u| u.key?(:contents) || u.key?(:dropins) }
-          raise 'All units have to have contents and/or dropins'
+        unless options[:units].all? { |u| u.key?(:contents) || u.key?(:dropins) || u.fetch(:enabled, true) == false || u.fetch(:mask, false) == true }
+          raise 'All enabled unmasked units have to have contents and/or dropins'
         end
 
         unless options[:files].all? { |f| FILE_REQUIRED_KEYS.all? { |key| f.key?(key) } }
