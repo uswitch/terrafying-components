@@ -86,14 +86,13 @@ RSpec.describe Terrafying::Components::Ignition, '#generate' do
       user_data_ign = Terrafying::Components::Ignition.generate(options)
 
       units = JSON.parse(user_data_ign, symbolize_names: true)[:systemd][:units]
+      unit = units.detect { |k| k.dig(:name) == 'var-test.mount' }
 
-      expect(units.any? do |unit|
-        unit == {
-          name: 'var-test.mount',
-          enabled: true,
-          contents: "[Install]\nWantedBy=local-fs.target\n\n[Unit]\nBefore=docker.service\n\n[Mount]\nWhat=/dev/test\nWhere=/var/test\nType=ext4\n"
-        }
-      end).to be true
+      expect(unit).to eq(
+        name: 'var-test.mount',
+        enabled: true,
+        contents: "[Install]\nWantedBy=local-fs.target\n\n[Unit]\nBefore=docker.service\n\n[Mount]\nWhat=/dev/test\nWhere=/var/test\nType=ext4\n"
+      )
     end
   end
 
@@ -101,16 +100,14 @@ RSpec.describe Terrafying::Components::Ignition, '#generate' do
     user_data = Terrafying::Components::Ignition.generate(
       units: [{ name: 'foo.service', contents: 'LOOL' }]
     )
-
     units = JSON.parse(user_data, symbolize_names: true)[:systemd][:units]
+    unit = units.detect { |k| k.dig(:name) == 'foo.service' }
 
-    expect(units.any? do |unit|
-             unit == {
-               name: 'foo.service',
-               enabled: true,
-               contents: 'LOOL'
-             }
-           end).to be true
+    expect(unit).to eq(
+      name: 'foo.service',
+      enabled: true,
+      contents: 'LOOL'
+    )
   end
 
   it 'adds in drops not just contents into units' do
@@ -119,14 +116,13 @@ RSpec.describe Terrafying::Components::Ignition, '#generate' do
     )
 
     units = JSON.parse(user_data, symbolize_names: true)[:systemd][:units]
+    unit = units.detect { |k| k.dig(:name) == 'docker.service' }
 
-    expect(units.any? do |unit|
-             unit == {
-               name: 'docker.service',
-               enabled: true,
-               dropins: [{ contents: 'LOL', name: '10-lol.conf' }]
-             }
-           end).to be true
+    expect(unit).to eq(
+      name: 'docker.service',
+      enabled: true,
+      dropins: [{ contents: 'LOL', name: '10-lol.conf' }]
+    )
   end
 
   context 'files' do
@@ -136,17 +132,16 @@ RSpec.describe Terrafying::Components::Ignition, '#generate' do
       )
 
       files = JSON.parse(user_data, symbolize_names: true)[:storage][:files]
+      file = files.detect { |k| k.dig(:path) == '/etc/app/app.conf' }
 
-      expect(files.any? do |file|
-               file == {
-                 filesystem: 'root',
-                 mode: '0999',
-                 path: '/etc/app/app.conf',
-                 user: { id: 0 },
-                 group: { id: 0 },
-                 contents: { source: 'data:;base64,TE9PTA==' }
-               }
-             end).to be true
+      expect(file).to eq(
+        filesystem: 'root',
+        mode: '0999',
+        path: '/etc/app/app.conf',
+        user: { id: 0 },
+        group: { id: 0 },
+        contents: { source: 'data:;base64,TE9PTA==' }
+      )
     end
 
     it 'adds in files with sources' do
@@ -155,8 +150,9 @@ RSpec.describe Terrafying::Components::Ignition, '#generate' do
       )
 
       files = JSON.parse(user_data, symbolize_names: true)[:storage][:files]
+      file = files.detect { |k| k.dig(:path) == '/etc/app/app.conf' }
 
-      expect(files).to include(
+      expect(file).to eq(
         filesystem: 'root',
         mode: '0999',
         path: '/etc/app/app.conf',
