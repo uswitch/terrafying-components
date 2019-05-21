@@ -55,13 +55,16 @@ module Terrafying
         @prometheus = create_prom
 
         @security_group = @prometheus.egress_security_group
-        # Allow thanos-query connections to thanos-sidecar on prometheus instances
+
+        # Form SRV record with thanos-sidecars
         @vpc.zone.add_srv_in(self, prometheus_thanos_sidecar_hostname, 'grpc', 10_901, 'tcp', @prom_service.domain_names.drop(1))
 
-        allow_prometheus_thanos_sidecar_grpc(@prometheus.egress_security_group, @thanos.security_group)
-
-        @prometheus.used_by_cidr(@vpc.cidr)
-        @thanos.used_by_cidr(@vpc.cidr)
+        # Allow Prometheus to scrape Thanos Query
+        @thanos.used_by(@prometheus) { |port| port[:upstream_port] == 10_902 }
+        # Allow Thanos Query instance to reach Prometheus running Thanos Sidecar
+        @prometheus.used_by(@thanos) { |port| port[:upstream_port] == 10_901 }
+        # Allow connections from VPC to Thanos Query services
+        @thanos.used_by_cidr(@vpc.cidr) { |port| [10_902, 10_901].include? port[:upstream_port] }
       end
 
       def create_prom
@@ -75,6 +78,10 @@ module Terrafying
             {
               type: 'tcp',
               number: 10_902
+            },
+            {
+              type: 'tcp',
+              number: 10_901
             }
           ],
           instance_type: @instance_type,
@@ -92,22 +99,12 @@ module Terrafying
         )
       end
 
-      def allow_prometheus_thanos_sidecar_grpc(security_group, source_security_group)
-        rule_ident = Digest::SHA2.hexdigest([security_group, source_security_group, @vpc.name, 'thanos-sidecar'].join('-'))[0..24]
-        resource :aws_security_group_rule, rule_ident,
-                 security_group_id: security_group,
-                 type: 'ingress',
-                 from_port: 10_901,
-                 to_port: 10_901,
-                 protocol: 'tcp',
-                 source_security_group_id: source_security_group
-      end
-
       def create_thanos(prometheus_thanos_sidecar_srv_fqdn)
         @thanos_service = add! Terrafying::Components::Service.create_in(
           @vpc, @thanos_name,
           ports: [
             {
+              type: 'tcp',
               number: 10_902,
               health_check: {
                 protocol: 'HTTP',
@@ -115,6 +112,7 @@ module Terrafying
               }
             },
             {
+              type: 'tcp',
               number: 10_901,
               health_check: {
                 protocol: 'TCP'
@@ -126,7 +124,6 @@ module Terrafying
           units: [thanos_unit(prometheus_thanos_sidecar_srv_fqdn)],
           instances: [{}] * @instances,
           loadbalancer: true,
-          metrics_ports: [10_902],
           tags: {
             prometheus_port: 10_902,
             prometheus_path: '/metrics'
