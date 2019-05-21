@@ -30,8 +30,7 @@ module Terrafying
       def create_in(vpc, name, options = {})
         options = {
           public: false,
-          instance_type: 't2.micro',
-          cpu_credits: 'unlimited',
+          instance_type: 't3a.micro',
           instance_profile: nil,
           ports: [],
           tags: {},
@@ -82,9 +81,6 @@ module Terrafying
         @id = resource :aws_instance, ident, {
           ami: options[:ami],
           instance_type: options[:instance_type],
-          credit_specification: {
-            cpu_credits: options[:cpu_credits]
-          },
           iam_instance_profile: profile_from(options[:instance_profile]),
           subnet_id: @subnet.id,
           associate_public_ip_address: options[:public],
