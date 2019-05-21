@@ -1,54 +1,49 @@
+# frozen_string_literal: true
+
 require 'erb'
 require 'ostruct'
 
 module Terrafying
-
   module Components
-
     class Ignition
+      UNIT_REQUIRED_KEYS = [:name].freeze
+      FILE_REQUIRED_KEYS = %i[path mode contents].freeze
 
-      UNIT_REQUIRED_KEYS = [:name]
-      FILE_REQUIRED_KEYS = [:path, :mode, :contents]
-
-      def self.container_unit(name, image, options={})
+      def self.container_unit(name, image, options = {})
         options = {
           volumes: [],
           environment_variables: [],
           arguments: [],
           require_units: [],
           host_networking: false,
-          privileged: false,
+          privileged: false
         }.merge(options)
 
         if options[:require_units].count > 0
-          require_units = options[:require_units].join(" ")
-          require = <<EOF
-After=#{require_units}
-Requires=#{require_units}
-EOF
+          require_units = options[:require_units].join(' ')
+          require = <<~EOF
+            After=#{require_units}
+            Requires=#{require_units}
+          EOF
         end
 
         docker_options = []
 
         if options[:environment_variables].count > 0
-          docker_options += options[:environment_variables].map { |var|
+          docker_options += options[:environment_variables].map do |var|
             "-e #{var}"
-          }
+          end
         end
 
         if options[:volumes].count > 0
-          docker_options += options[:volumes].map { |volume|
+          docker_options += options[:volumes].map do |volume|
             "-v #{volume}"
-          }
+          end
         end
 
-        if options[:host_networking]
-          docker_options << "--net=host"
-        end
+        docker_options << '--net=host' if options[:host_networking]
 
-        if options[:privileged]
-          docker_options << "--privileged"
-        end
+        docker_options << '--privileged' if options[:privileged]
 
         docker_options_str = " \\\n" + docker_options.join(" \\\n")
 
@@ -58,60 +53,58 @@ EOF
 
         {
           name: "#{name}.service",
-          contents: <<EOF
-[Install]
-WantedBy=multi-user.target
+          contents: <<~EOF
+            [Install]
+            WantedBy=multi-user.target
 
-[Unit]
-Description=#{name}
-#{require}
+            [Unit]
+            Description=#{name}
+            #{require}
 
-[Service]
-ExecStartPre=-/usr/bin/docker rm -f #{name}
-ExecStart=/usr/bin/docker run --name #{name} #{docker_options_str} \
-#{image} #{arguments}
-Restart=always
-RestartSec=30
+            [Service]
+            ExecStartPre=-/usr/bin/docker rm -f #{name}
+            ExecStart=/usr/bin/docker run --name #{name} #{docker_options_str} \
+            #{image} #{arguments}
+            Restart=always
+            RestartSec=30
 
-EOF
+          EOF
         }
       end
 
-      def self.generate(options={})
+      def self.generate(options = {})
         options = {
           keypairs: [],
           volumes: [],
           files: [],
           units: [],
-          ssh_group: "cloud",
+          networkd_units: [],
+          ssh_group: 'cloud',
           disable_update_engine: false,
-          region: Terrafying::Generator.aws.region,
+          region: Terrafying::Generator.aws.region
         }.merge(options)
 
-        if ! options[:units].all? { |u| UNIT_REQUIRED_KEYS.all? { |key| u.has_key?(key) } }
+        unless options[:units].all? { |u| UNIT_REQUIRED_KEYS.all? { |key| u.key?(key) } }
           raise "All units require the following keys: #{UNIT_REQUIRED_KEYS}"
         end
 
-        if ! options[:units].all? { |u| u.has_key?(:contents) || u.has_key?(:dropins) }
-          raise "All units have to have contents and/or dropins"
+        unless options[:units].all? { |u| u.key?(:contents) || u.key?(:dropins) || u.fetch(:enabled, true) == false || u.fetch(:mask, false) == true }
+          raise 'All enabled unmasked units have to have contents and/or dropins'
         end
 
-        if ! options[:files].all? { |f| FILE_REQUIRED_KEYS.all? { |key| f.has_key?(key) } }
+        unless options[:files].all? { |f| FILE_REQUIRED_KEYS.all? { |key| f.key?(key) } }
           raise "All files require the following keys: #{FILE_REQUIRED_KEYS}"
         end
 
         options[:cas] = options[:keypairs].map { |kp| kp[:ca] }.compact.sort.uniq
 
-        erb_path = File.join(File.dirname(__FILE__), "templates/ignition.yaml")
+        erb_path = File.join(File.dirname(__FILE__), 'templates/ignition.yaml')
         erb = ERB.new(IO.read(erb_path))
 
         yaml = erb.result(OpenStruct.new(options).instance_eval { binding })
 
         Terrafying::Util.to_ignition(yaml)
       end
-
     end
-
   end
-
 end

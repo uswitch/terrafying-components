@@ -1,7 +1,6 @@
 ---
 ignition:
-  version: "2.1.0"
-
+  version: "2.2.0"
 
 passwd:
   users:
@@ -37,15 +36,37 @@ systemd:
 
     <% units.each { |unit| %>
     - name: "<%= unit[:name] %>"
-      enabled: true<% if unit.has_key?(:contents) %>
-      contents: "<%= unit[:contents].dump[1..-2] %>"<% end %><% if unit.has_key?(:dropins) %>
+      enabled: <%= unit.fetch(:enabled, 'true') %>
+      <% if unit.has_key?(:mask) %>
+      mask: <%= unit[:mask] %>
+      <% end %>
+      <% if unit.has_key?(:contents) %>
+      contents: "<%= unit[:contents].dump[1..-2] %>"
+      <% end %>
+      <% if unit.has_key?(:dropins) %>
       dropins:
         <% unit[:dropins].each { |dropin| %>
         - contents: "<%= dropin[:contents].dump[1..-2] %>"
           name: "<%= dropin[:name] %>"
-        <% } %><% end %>
+        <% } %>
+      <% end %>
     <% } %>
 
+networkd:
+  units:
+    <% networkd_units.each { |unit| %>
+    - name: "<%= unit[:name] %>"
+      <% if unit.has_key?(:contents) %>
+      contents: "<%= unit[:contents].dump[1..-2] %>"
+      <% end %>
+      <% if unit.has_key?(:dropins) %>
+      dropins:
+        <% unit[:dropins].each { |dropin| %>
+        - contents: "<%= dropin[:contents].dump[1..-2] %>"
+          name: "<%= dropin[:name] %>"
+        <% } %>
+      <% end %>
+    <% } %>
 
 storage:
   <% if volumes.count > 0 %>

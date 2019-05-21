@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 
 require 'terrafying/components/endpoint'
 require 'terrafying/components/endpointservice'

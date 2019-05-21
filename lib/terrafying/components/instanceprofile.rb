@@ -1,13 +1,11 @@
+# frozen_string_literal: true
 
 module Terrafying
-
   module Components
-
     class InstanceProfile < Terrafying::Context
-
       attr_reader :id, :resource_name, :role_arn, :role_resource
 
-      def self.create(name, options={})
+      def self.create(name, options = {})
         InstanceProfile.new.create name, options
       end
 
@@ -15,39 +13,35 @@ module Terrafying
         InstanceProfile.new.find name
       end
 
-      def initialize()
+      def initialize
         super
       end
 
-      def find(name)
+      def find(_name)
         raise 'unimplemented'
       end
 
-      def create(name, options={})
+      def create(name, options = {})
         options = {
-          statements: [],
+          statements: []
         }.merge(options)
 
-        resource :aws_iam_role, name, {
-                   name: name,
-                   assume_role_policy: JSON.pretty_generate(
+        resource :aws_iam_role, name,
+                 name: name,
+                 assume_role_policy: JSON.pretty_generate(
+                   Version: '2012-10-17',
+                   Statement: [
                      {
-                       Version: "2012-10-17",
-                       Statement: [
-                         {
-                           Effect: "Allow",
-                           Principal: { "Service": "ec2.amazonaws.com"},
-                           Action: "sts:AssumeRole"
-                         }
-                       ]
+                       Effect: 'Allow',
+                       Principal: { "Service": 'ec2.amazonaws.com' },
+                       Action: 'sts:AssumeRole'
                      }
-                   )
-                 }
+                   ]
+                 )
 
-        @id = resource :aws_iam_instance_profile, name, {
-                         name: name,
-                         role: output_of(:aws_iam_role, name, :name),
-                       }
+        @id = resource :aws_iam_instance_profile, name,
+                       name: name,
+                       role: output_of(:aws_iam_role, name, :name)
         @name = name
         @resource_name = "aws_iam_instance_profile.#{name}"
 
@@ -55,25 +49,25 @@ module Terrafying
         @role_resource = "aws_iam_role.#{name}"
 
         @statements = [
-                         {
-                           Sid: "Stmt1442396947000",
-                           Effect: "Allow",
-                           Action: [
-                             "iam:GetGroup",
-                             "iam:GetSSHPublicKey",
-                             "iam:GetUser",
-                             "iam:ListSSHPublicKeys"
-                           ],
-                           Resource: [
-                             "arn:aws:iam::*"
-                           ]
-                         }
+          {
+            Sid: 'Stmt1442396947000',
+            Effect: 'Allow',
+            Action: [
+              'iam:GetGroup',
+              'iam:GetSSHPublicKey',
+              'iam:GetUser',
+              'iam:ListSSHPublicKeys'
+            ],
+            Resource: [
+              'arn:aws:iam::*'
+            ]
+          }
         ].push(*options[:statements])
 
         @policy_config = {
           name: @name,
           policy: policy,
-          role: output_of(:aws_iam_role, @name, :name),
+          role: output_of(:aws_iam_role, @name, :name)
         }
 
         resource :aws_iam_role_policy, @name, @policy_config
@@ -83,10 +77,8 @@ module Terrafying
 
       def policy
         JSON.pretty_generate(
-          {
-            Version: "2012-10-17",
-            Statement: @statements,
-          }
+          Version: '2012-10-17',
+          Statement: @statements
         )
       end
 
@@ -94,7 +86,6 @@ module Terrafying
         @statements << statement
         @policy_config[:policy] = policy
       end
-
     end
   end
 end

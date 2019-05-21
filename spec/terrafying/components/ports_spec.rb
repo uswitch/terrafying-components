@@ -18,7 +18,7 @@ RSpec.describe Object, '#enrich_ports' do
           name: 'http',
           type: 'http',
           upstream_port: 80,
-          downstream_port: 80,
+          downstream_port: 80
         )
       )
     end
@@ -68,7 +68,6 @@ RSpec.describe Object, '#enrich_ports' do
       )
     end
   end
-
 
   context 'port names' do
     it 'should name the port according to the IANA number' do
