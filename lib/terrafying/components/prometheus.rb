@@ -24,8 +24,7 @@ module Terrafying
         prom_name: 'prometheus',
         prom_version: 'v2.9.2',
         instances: 2,
-        instance_type: 't3a.small',
-        instance_cpu_credits: 'standard'
+        instance_type: 't3a.small'
       )
         super()
         @vpc = vpc
@@ -35,7 +34,6 @@ module Terrafying
         @prom_version = prom_version
         @instances = instances
         @instance_type = instance_type
-        @instance_cpu_credits = instance_cpu_credits
       end
 
       def find
@@ -85,7 +83,6 @@ module Terrafying
             }
           ],
           instance_type: @instance_type,
-          cpu_credits: @instance_cpu_credits,
           iam_policy_statements: thanos_store_access,
           instances: [{}] * @instances,
           units: [prometheus_unit, thanos_sidecar_unit],
@@ -120,7 +117,6 @@ module Terrafying
             }
           ],
           instance_type: @instance_type,
-          cpu_credits: @instance_cpu_credits,
           units: [thanos_unit(prometheus_thanos_sidecar_srv_fqdn)],
           instances: [{}] * @instances,
           loadbalancer: true,
