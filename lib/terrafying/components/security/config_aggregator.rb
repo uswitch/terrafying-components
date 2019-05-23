@@ -60,13 +60,8 @@ module Terrafying
 
           resource :aws_config_configuration_aggregator, ident, {
                      depends_on: [ "aws_iam_role_policy_attachment.#{ident}-config-org-policy" ],
-
                      name: name,
-                     organization_aggregation_source: {
-                       all_regions: true,
-                       role_arn: role["arn"],
-                     }
-                   }
+                   }.merge(source)
 
           self
         end
