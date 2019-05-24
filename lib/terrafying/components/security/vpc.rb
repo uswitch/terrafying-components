@@ -62,11 +62,6 @@ module Terrafying
 
           ident = tf_safe("default-vpc-#{region}")
 
-          log_group = resource :aws_cloudwatch_log_group, ident, {
-                                 provider: provider,
-                                 name: "default-vpc-#{region}",
-                               }
-
           default_vpc = resource :aws_default_vpc, ident, {
                                    provider: provider,
                                    tags: { Name: "Default VPC" },
