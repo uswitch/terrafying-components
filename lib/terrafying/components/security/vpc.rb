@@ -13,6 +13,47 @@ module Terrafying
           VPC.new.create(*args)
         end
 
+        def self.bucket_statements(bucket_name)
+          [
+            {
+              Sid: "FlowLogsAclCheck",
+              Effect: "Allow",
+              Principal: {
+                Service: "delivery.logs.amazonaws.com"
+              },
+              Action: "s3:GetBucketAcl",
+              Resource: "arn:aws:s3:::#{bucket_name}"
+            },
+            {
+              Sid: "FlowLogsWrite",
+              Effect: "Allow",
+              Principal: {
+                Service: "delivery.logs.amazonaws.com"
+              },
+              Action: "s3:PutObject",
+              Resource: "arn:aws:s3:::#{bucket_name}/flow-logs/*",
+              Condition: {
+                StringEquals: {
+                  "s3:x-amz-acl" => "bucket-owner-full-control"
+                }
+              }
+            }
+          ]
+        end
+
+        def self.key_statements
+          [
+            {
+              Sid: "Allow Flow logs to encrypt logs",
+              Effect: "Allow",
+              Principal: {"Service": ["delivery.logs.amazonaws.com"]},
+              Action: "kms:GenerateDataKey*",
+              Resource: "*",
+            },
+          ]
+        end
+
+
         def create(
               region:,
               provider:,
