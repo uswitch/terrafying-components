@@ -54,7 +54,7 @@ module Terrafying
                                }
                              }
 
-          @arn = bucket["arn"]
+          @arn = @bucket["arn"]
 
           self
         end
