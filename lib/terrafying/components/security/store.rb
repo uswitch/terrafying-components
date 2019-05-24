@@ -10,7 +10,7 @@ module Terrafying
 
       class Store < Terrafying::Context
 
-        attr_reader :name, :key_arn
+        attr_reader :name, :arn, :key_arn
 
         def self.create(*args)
           Store.new.create(*args)
@@ -53,6 +53,8 @@ module Terrafying
                                  Name: name,
                                }
                              }
+
+          @arn = @bucket["arn"]
 
           self
         end
