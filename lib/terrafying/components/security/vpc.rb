@@ -3,7 +3,7 @@ require 'terrafying'
 
 module Terrafying
 
-  module Component
+  module Components
 
     module Security
 
