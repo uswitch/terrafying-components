@@ -63,8 +63,9 @@ module Terrafying
           ident = tf_safe("default-vpc-#{region}")
 
           log_group = resource :aws_cloudwatch_log_group, ident, {
-                                  name: "default-vpc-#{region}",
-                                }
+                                 provider: provider,
+                                 name: "default-vpc-#{region}",
+                               }
 
           default_vpc = resource :aws_default_vpc, ident, {
                                    provider: provider,
@@ -95,6 +96,7 @@ module Terrafying
                    }
 
           resource :aws_flow_log, ident, {
+                     provider: provider,
                      vpc_id: default_vpc["id"],
                      traffic_type: "ALL",
                      log_destination: "#{store.arn}/flow-logs/",
