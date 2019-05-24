@@ -14,7 +14,8 @@ module Terrafying
         end
 
         def create(
-              support_assume_policy:
+              support_assume_policy:,
+              password_policy: {}
             )
 
           # 1.5	Ensure IAM password policy requires at least one uppercase letter
@@ -33,7 +34,7 @@ module Terrafying
                      allow_users_to_change_password: true,
                      password_reuse_prevention: true,
                      max_password_age: 90,
-                   }
+                   }.merge(password_policy)
 
           # 1.20	Ensure a support role has been created to manage incidents with AWS Support
           support_role = resource :aws_iam_role, "support", {
