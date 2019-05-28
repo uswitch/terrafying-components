@@ -87,6 +87,7 @@ module Terrafying
         @service = add! Service.create_in(
           vpc, name,
           {
+            eip: @is_public,
             public: @is_public,
             ports: [22, 443, { number: 1194, type: 'udp' }],
             tags: options[:tags],
