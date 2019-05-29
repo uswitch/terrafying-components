@@ -128,7 +128,7 @@ module Terrafying
           }
         ]
 
-        if @is_public
+        if @public
           ingress_rules << {
             from_port: 0,
             to_port: 0,
