@@ -14,6 +14,7 @@ module Terrafying
           volumes: [],
           environment_variables: [],
           arguments: [],
+          ports: [],
           require_units: [],
           host_networking: false,
           privileged: false
@@ -29,17 +30,9 @@ module Terrafying
 
         docker_options = []
 
-        if options[:environment_variables].count > 0
-          docker_options += options[:environment_variables].map do |var|
-            "-e #{var}"
-          end
-        end
-
-        if options[:volumes].count > 0
-          docker_options += options[:volumes].map do |volume|
-            "-v #{volume}"
-          end
-        end
+        docker_options += options[:environment_variables].map { |var| "-e #{var}" }
+        docker_options += options[:volumes].map { |volume| "-v #{volume}" }
+        docker_options += options[:ports].map { |port| "-p #{port}:#{port}" }
 
         docker_options << '--net=host' if options[:host_networking]
 

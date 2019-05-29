@@ -9,26 +9,10 @@ RSpec.describe Terrafying::Components::OIDCVPN do
   end
 
   context 'validation of provider' do
-    it 'requires a hash' do
-      expect do
-        Terrafying::Components::OIDCVPN.create_in(
-          @vpc, 'foo', 'bhas'
-        )
-      end.to raise_error RuntimeError
-    end
-
-    it 'requires at least a client_id and issuer_url' do
-      expect do
-        Terrafying::Components::OIDCVPN.create_in(
-          @vpc, 'foo', {}
-        )
-      end.to raise_error RuntimeError
-    end
-
     it 'if we provide a client_id and issuer_url everything should be fine' do
       expect do
         Terrafying::Components::OIDCVPN.create_in(
-          @vpc, 'foo', client_id: 'foo', issuer_url: 'foo'
+          vpc: @vpc, name: 'foo', client_id: 'foo', issuer_url: 'foo'
         )
       end.to_not raise_error
     end
@@ -37,7 +21,7 @@ RSpec.describe Terrafying::Components::OIDCVPN do
   context 'openvpn-authz' do
     it 'should have the id and secret in the user data' do
       vpn = Terrafying::Components::OIDCVPN.create_in(
-        @vpc, 'foo', client_id: 'foo', issuer_url: 'foo.com/oidc'
+        vpc: @vpc, name: 'foo', client_id: 'foo', issuer_url: 'foo.com/oidc'
       )
 
       output = vpn.output_with_children
@@ -53,7 +37,7 @@ RSpec.describe Terrafying::Components::OIDCVPN do
 
     it 'should have groups if any are defined' do
       vpn = Terrafying::Components::OIDCVPN.create_in(
-        @vpc, 'foo', { client_id: 'foo', issuer_url: 'foo.com/oidc' }, groups: ['test-group']
+        vpc: @vpc, name: 'foo', client_id: 'foo', issuer_url: 'foo.com/oidc', groups: ['test-group']
       )
 
       output = vpn.output_with_children
@@ -66,12 +50,29 @@ RSpec.describe Terrafying::Components::OIDCVPN do
       expect(authz_unit[:contents]).to include('--oidc-allowed-groups "test-group"')
     end
 
+    it 'should have the id and secret in the user data' do
+      ca = Terrafying::Components::SelfSignedCA.create('test-ca', 'test-bucket')
+
+      vpn = Terrafying::Components::OIDCVPN.create_in(
+        vpc: @vpc, name: 'foo', client_id: 'foo', issuer_url: 'foo.com/oidc', ca: ca
+      )
+
+      output = vpn.output_with_children
+
+      vpn_instance = output['resource']['aws_instance'].values.first
+      vpn_user_data = JSON.parse(vpn_instance[:user_data], symbolize_names: true)
+
+      authz_unit = vpn_user_data[:systemd][:units].select { |unit| unit[:name] == 'openvpn-authz.service' }.first
+
+      expect(authz_unit[:contents]).to include('--tls-cert-file /etc/ssl/test-ca/foo.a-vpc.vpc.usw.co/cert')
+      expect(authz_unit[:contents]).to include('--tls-key-file /etc/ssl/test-ca/foo.a-vpc.vpc.usw.co/key')
+    end
   end
 
   context 'route_dns_entries' do
     it 'there shouldnt be any domains by default' do
       vpn = Terrafying::Components::OIDCVPN.create_in(
-        @vpc, 'foo', client_id: 'foo', issuer_url: 'foo.com/oidc'
+        vpc: @vpc, name: 'foo', client_id: 'foo', issuer_url: 'foo.com/oidc'
       )
 
       output = vpn.output_with_children
@@ -86,7 +87,7 @@ RSpec.describe Terrafying::Components::OIDCVPN do
 
     it 'there shouldnt be any domains by default' do
       vpn = Terrafying::Components::OIDCVPN.create_in(
-        @vpc, 'foo', { client_id: 'foo', issuer_url: 'foo.com/oidc' },
+        vpc: @vpc, name: 'foo', client_id: 'foo', issuer_url: 'foo.com/oidc',
         route_dns_entries: [
           'wibble.com',
           'bibble.com'

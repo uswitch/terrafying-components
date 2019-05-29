@@ -81,6 +81,7 @@ module Terrafying
         end
 
         associate_public_ip_address = !options[:eip] && options[:public]
+
         @id = resource :aws_instance, ident, {
           ami: options[:ami],
           instance_type: options[:instance_type],

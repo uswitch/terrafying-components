@@ -61,7 +61,7 @@ RSpec.describe Terrafying::Components::Instance do
       eip  = instance.output['resource']['aws_eip'].values.first
 
       expect(inst).to include(associate_public_ip_address: false)
-      expect(instance.ip_address.to_s).to match('public_ip')
+      expect(instance.ip_address.to_s).to match('aws_eip.a-vpc-an-instance.public_ip')
       expect(eip[:instance].to_s).to match('an-instance')
     end
   end

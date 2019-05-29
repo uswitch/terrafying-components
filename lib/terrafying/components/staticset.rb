@@ -37,6 +37,7 @@ module Terrafying
       def create_in(vpc, name, options = {})
         options = {
           public: false,
+          eip: false,
           ami: aws.ami('base-image-24b8d5fb', owners = ['136393635417']),
           instance_type: 't3a.micro',
           subnets: vpc.subnets.fetch(:private, []),
