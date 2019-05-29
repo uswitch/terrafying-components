@@ -80,7 +80,7 @@ module Terrafying
           @subnet = subnets[subnet_index]
         end
 
-        associate_public_ip_address = !options[:eip] && options[:public]
+        associate_public_ip_address = options[:eip] || options[:public]
 
         @id = resource :aws_instance, ident, {
           ami: options[:ami],
@@ -105,7 +105,7 @@ module Terrafying
           depends_on: options[:depends_on]
         }.merge(options[:ip_address] ? { private_ip: options[:ip_address] } : {}).merge(lifecycle)
 
-        @ip_address = @id[associate_public_ip_address ? :public_ip : :private_ip]
+        @ip_address = @id[options[:public] ? :public_ip : :private_ip]
 
         if options[:eip]
           @eip = resource :aws_eip, ident, {
