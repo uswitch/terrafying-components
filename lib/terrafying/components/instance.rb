@@ -2,6 +2,7 @@
 
 require 'xxhash'
 
+require 'terrafying/components/ports'
 require 'terrafying/components/usable'
 
 module Terrafying
@@ -30,6 +31,7 @@ module Terrafying
       def create_in(vpc, name, options = {})
         options = {
           public: false,
+          eip: false,
           instance_type: 't3a.micro',
           instance_profile: nil,
           ports: [],
@@ -78,12 +80,14 @@ module Terrafying
           @subnet = subnets[subnet_index]
         end
 
+        associate_public_ip_address = !options[:eip] && options[:public]
+
         @id = resource :aws_instance, ident, {
           ami: options[:ami],
           instance_type: options[:instance_type],
           iam_instance_profile: profile_from(options[:instance_profile]),
           subnet_id: @subnet.id,
-          associate_public_ip_address: options[:public],
+          associate_public_ip_address: associate_public_ip_address,
           root_block_device: {
             volume_type: 'gp2',
             volume_size: 32
@@ -101,7 +105,15 @@ module Terrafying
           depends_on: options[:depends_on]
         }.merge(options[:ip_address] ? { private_ip: options[:ip_address] } : {}).merge(lifecycle)
 
-        @ip_address = output_of(:aws_instance, ident, options[:public] ? :public_ip : :private_ip)
+        @ip_address = @id[associate_public_ip_address ? :public_ip : :private_ip]
+
+        if options[:eip]
+          @eip = resource :aws_eip, ident, {
+            instance: @id,
+            vpc: true
+          }
+          @ip_address = @eip[:public_ip]
+        end
 
         self
       end

@@ -28,4 +28,41 @@ RSpec.describe Terrafying::Components::Instance do
 
     expect(@vpc.subnets[:private].map(&:id)).to include(subnet_id)
   end
+
+  context 'public and eips' do
+    it 'should allocate a public ip when public is true' do
+      instance = Terrafying::Components::Instance.create_in(
+        @vpc, 'an-instance', public: true
+      )
+
+      inst = instance.output['resource']['aws_instance'].values.first
+
+      expect(inst).to include(associate_public_ip_address: true)
+      expect(instance.ip_address.to_s).to include('public_ip')
+    end
+
+    it 'should not allocate a public ip when public is false' do
+        instance = Terrafying::Components::Instance.create_in(
+          @vpc, 'an-instance', public: false
+        )
+
+        inst = instance.output['resource']['aws_instance'].values.first
+
+        expect(inst).to include(associate_public_ip_address: false)
+        expect(instance.ip_address.to_s).to match('private_ip')
+    end
+
+    it 'should allocate an eip ip when eip and public is true' do
+      instance = Terrafying::Components::Instance.create_in(
+        @vpc, 'an-instance', public: true, eip: true
+      )
+
+      inst = instance.output['resource']['aws_instance'].values.first
+      eip  = instance.output['resource']['aws_eip'].values.first
+
+      expect(inst).to include(associate_public_ip_address: false)
+      expect(instance.ip_address.to_s).to match('aws_eip.a-vpc-an-instance.public_ip')
+      expect(eip[:instance].to_s).to match('an-instance')
+    end
+  end
 end
