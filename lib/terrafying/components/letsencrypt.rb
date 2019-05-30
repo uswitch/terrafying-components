@@ -120,7 +120,8 @@ module Terrafying
                      dns_challenge: {
                        provider: 'route53'
                      },
-                     certificate_request_pem: output_of(:tls_cert_request, key_ident, :cert_request_pem)
+                     certificate_request_pem: output_of(:tls_cert_request, key_ident, :cert_request_pem),
+                     recursive_nameservers: ['1.1.1.1:53', '8.8.8.8:53', '8.8.4.4:53']
 
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-key",
                      bucket: @bucket,
