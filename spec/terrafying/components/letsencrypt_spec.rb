@@ -88,5 +88,36 @@ RSpec.describe Terrafying::Components::LetsEncrypt, '#create_keypair' do
 
       expect(cert[:provider]).to eq('acme.staging')
     end
+
+    it 'uses external nameservers when requested' do
+      ca = Terrafying::Components::LetsEncrypt.create(
+        'test-ca',
+        'test-bucket',
+        prefix: 'test-prefix',
+        provider: :staging,
+        use_external_dns: true
+      )
+
+      ca.create_keypair('test-cert', dns_names: ['test.example.com'])
+
+      cert = ca.output_with_children['resource']['acme_certificate'].values.first
+
+      expect(cert[:recursive_nameservers]).to include('1.1.1.1:53', '8.8.8.8:53', '8.8.4.4:53')
+    end
+
+    it 'uses system nameservers by default' do
+      ca = Terrafying::Components::LetsEncrypt.create(
+        'test-ca',
+        'test-bucket',
+        prefix: 'test-prefix',
+        provider: :staging,
+      )
+
+      ca.create_keypair('test-cert', dns_names: ['test.example.com'])
+
+      cert = ca.output_with_children['resource']['acme_certificate'].values.first
+
+      expect(cert.key? :recursive_nameservers).to eq(false)
+    end
   end
 end

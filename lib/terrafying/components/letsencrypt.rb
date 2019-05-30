@@ -38,13 +38,15 @@ module Terrafying
           provider: :staging,
           email_address: 'cloud@uswitch.com',
           public_certificate: false,
-          curve: 'P384'
+          curve: 'P384',
+          use_external_dns: false
         }.merge(options)
 
         @name = name
         @bucket = bucket
         @prefix = options[:prefix]
         @acme_provider = @acme_providers[options[:provider]]
+        @use_external_dns = options[:use_external_dns]
 
         provider :tls, {}
 
@@ -113,7 +115,10 @@ module Terrafying
                      dns_names: options[:dns_names],
                      ip_addresses: options[:ip_addresses]
 
-        ctx.resource :acme_certificate, key_ident,
+        cert_options = {}
+        cert_options[:recursive_nameservers] = ['1.1.1.1:53', '8.8.8.8:53', '8.8.4.4:53'] if @use_external_dns
+
+        ctx.resource :acme_certificate, key_ident, {
                      provider: @acme_provider[:ref],
                      account_key_pem: @account_key,
                      min_days_remaining: options[:min_days_remaining],
@@ -121,6 +126,7 @@ module Terrafying
                        provider: 'route53'
                      },
                      certificate_request_pem: output_of(:tls_cert_request, key_ident, :cert_request_pem)
+                   }.merge(cert_options)
 
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-key",
                      bucket: @bucket,
