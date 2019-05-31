@@ -24,7 +24,9 @@ module Terrafying
         prom_name: 'prometheus',
         prom_version: 'v2.10.0',
         instances: 2,
-        instance_type: 't3a.small'
+        instance_type: 't3a.small',
+        thanos_instance_type: 't3a.small',
+        prometheus_tsdb_retention: '1d'
       )
         super()
         @vpc = vpc
@@ -33,7 +35,9 @@ module Terrafying
         @prom_name = prom_name
         @prom_version = prom_version
         @instances = instances
-        @instance_type = instance_type
+        @prometheus_instance_type = instance_type
+        @thanos_instance_type = thanos_instance_type
+        @prometheus_tsdb_retention = prometheus_tsdb_retention
       end
 
       def find
@@ -46,7 +50,8 @@ module Terrafying
       def create
         prometheus_thanos_sidecar_hostname = tf_safe(@prom_name)
         prometheus_thanos_sidecar_srv_fqdn = "_grpc._tcp.#{@vpc.zone.qualify prometheus_thanos_sidecar_hostname}"
-        @instance_vcpu_count = aws.instance_type_vcpu_count(@instance_type)
+        @prometheus_instance_vcpu_count = aws.instance_type_vcpu_count(@prometheus_instance_type)
+        @thanos_instance_vcpu_count = aws.instance_type_vcpu_count(@thanos_instance_type)
         @thanos = create_thanos(prometheus_thanos_sidecar_srv_fqdn)
         create_thanos_cloudwatch_alert(@thanos)
 
@@ -82,7 +87,7 @@ module Terrafying
               number: 10_901
             }
           ],
-          instance_type: @instance_type,
+          instance_type: @prometheus_instance_type,
           iam_policy_statements: thanos_store_access,
           instances: [{}] * @instances,
           units: [prometheus_unit, thanos_sidecar_unit],
@@ -116,7 +121,7 @@ module Terrafying
               }
             }
           ],
-          instance_type: @instance_type,
+          instance_type: @thanos_instance_type,
           units: [thanos_unit(prometheus_thanos_sidecar_srv_fqdn)],
           instances: [{}] * @instances,
           loadbalancer: true,
@@ -150,12 +155,12 @@ module Terrafying
               -v /opt/prometheus:/opt/prometheus \
               quay.io/prometheus/prometheus:#{@prom_version} \
               --storage.tsdb.path=/opt/prometheus/data \
-              --storage.tsdb.retention.time=1d \
+              --storage.tsdb.retention.time=#{@prometheus_tsdb_retention} \
               --storage.tsdb.min-block-duration=2h \
               --storage.tsdb.max-block-duration=2h \
               --storage.tsdb.no-lockfile \
-              --storage.remote.read-concurrent-limit=#{@instance_vcpu_count} \
-              --query.max-concurrency=#{@instance_vcpu_count} \
+              --storage.remote.read-concurrent-limit=#{@prometheus_instance_vcpu_count} \
+              --query.max-concurrency=#{@prometheus_instance_vcpu_count} \
               --config.file=/opt/prometheus/prometheus.yml \
               --web.console.templates=/etc/prometheus/consoles \
               --web.console.libraries=/etc/prometheus/console_libraries \
@@ -271,7 +276,7 @@ module Terrafying
               improbable/thanos:#{@thanos_version} \
               query \
               --query.replica-label=replica \
-              --query.max-concurrent=#{@instance_vcpu_count} \
+              --query.max-concurrent=#{@thanos_instance_vcpu_count} \
               --store=dnssrv+#{prometheus_thanos_sidecar_srv_fqdn} \
               --log.level=warn
             Restart=always
