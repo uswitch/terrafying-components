@@ -26,7 +26,9 @@ module Terrafying
         instances: 2,
         instance_type: 't3a.small',
         thanos_instance_type: 't3a.small',
-        prometheus_tsdb_retention: '1d'
+        prometheus_tsdb_retention: '1d',
+        prometheus_data_dir: '/var/lib/prometheus',
+        prometheus_data_size: 20
       )
         super()
         @vpc = vpc
@@ -38,6 +40,8 @@ module Terrafying
         @prometheus_instance_type = instance_type
         @thanos_instance_type = thanos_instance_type
         @prometheus_tsdb_retention = prometheus_tsdb_retention
+        @prometheus_data_dir = prometheus_data_dir
+        @prometheus_data_size = prometheus_data_size
       end
 
       def find
@@ -92,6 +96,7 @@ module Terrafying
           instances: [{}] * @instances,
           units: [prometheus_unit, thanos_sidecar_unit],
           files: [prometheus_conf, thanos_bucket],
+          volumes: [prometheus_data_volume],
           tags: {
             prometheus_port: 9090,
             prometheus_path: '/metrics',
@@ -132,29 +137,42 @@ module Terrafying
         )
       end
 
+      def prometheus_data_volume
+
+        {
+          name: 'prometheus_data',
+          mount: @prometheus_data_dir,
+          device: '/dev/xvdl',
+          size: @prometheus_data_size,
+        }
+      end
+
       def prometheus_unit
         {
           name: 'prometheus.service',
           contents: <<~PROM_UNIT
             [Install]
             WantedBy=multi-user.target
-             [Unit]
+
+            [Unit]
             Description=Prometheus Service
             After=docker.service
             Requires=docker.service
-             [Service]
+
+            [Service]
             ExecStartPre=-/usr/bin/docker network create --driver bridge prom
             ExecStartPre=-/usr/bin/docker kill prometheus
             ExecStartPre=-/usr/bin/docker rm prometheus
             ExecStartPre=/usr/bin/docker pull quay.io/prometheus/prometheus:#{@prom_version}
             ExecStartPre=-/usr/bin/sed -i "s/{{HOST}}/%H/" /opt/prometheus/prometheus.yml
-            ExecStartPre=/usr/bin/install -d -o nobody -g nobody -m 0755 /opt/prometheus/data
+            ExecStartPre=/usr/bin/install -d -o nobody -g nobody -m 0755 #{@prometheus_data_dir}
             ExecStart=/usr/bin/docker run --name prometheus \
               -p 9090:9090 \
               --network=prom \
               -v /opt/prometheus:/opt/prometheus \
+              -v #{@prometheus_data_dir}:/var/lib/prometheus \
               quay.io/prometheus/prometheus:#{@prom_version} \
-              --storage.tsdb.path=/opt/prometheus/data \
+              --storage.tsdb.path=/var/lib/prometheus/tsdb \
               --storage.tsdb.retention.time=#{@prometheus_tsdb_retention} \
               --storage.tsdb.min-block-duration=2h \
               --storage.tsdb.max-block-duration=2h \
@@ -178,23 +196,25 @@ module Terrafying
           contents: <<~THANOS_SIDE
             [Install]
             WantedBy=multi-user.target
-             [Unit]
+
+            [Unit]
             Description=Thanos Service
             After=docker.service prometheus.service
             Requires=docker.service prometheus.service
-             [Service]
+
+            [Service]
             ExecStartPre=-/usr/bin/docker kill thanos
             ExecStartPre=-/usr/bin/docker rm thanos
             ExecStartPre=/usr/bin/docker pull improbable/thanos:#{@thanos_version}
             ExecStart=/usr/bin/docker run --name thanos \
               -p 10901-10902:10901-10902 \
-              -v /opt/prometheus:/opt/prometheus \
+              -v #{@prometheus_data_dir}:/var/lib/prometheus \
               -v /opt/thanos:/opt/thanos \
               --network=prom \
               improbable/thanos:#{@thanos_version} \
               sidecar \
               --prometheus.url=http://prometheus:9090 \
-              --tsdb.path=/opt/prometheus/data \
+              --tsdb.path=/var/lib/prometheus/tsdb \
               --objstore.config-file=/opt/thanos/bucket.yml \
               --log.level=warn
             Restart=always
