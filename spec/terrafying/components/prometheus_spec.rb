@@ -25,7 +25,7 @@ RSpec.describe Terrafying::Components::Prometheus, '#find_in' do
       prom = described_class.create_in(vpc: vpc)
 
       prom_vol = prom.output_with_children['resource']['aws_ebs_volume']['prometheus-0-0']
-      puts prom_vol
+
       expect(prom_vol).to include(size: 20)
     end
   end
