@@ -208,7 +208,7 @@ module Terrafying
             ExecStartPre=/usr/bin/docker pull improbable/thanos:#{@thanos_version}
             ExecStart=/usr/bin/docker run --name thanos \
               -p 10901-10902:10901-10902 \
-              -v #{@data_dir}:/var/lib/prometheus \
+              -v #{@prometheus_data_dir}:/var/lib/prometheus \
               -v /opt/thanos:/opt/thanos \
               --network=prom \
               improbable/thanos:#{@thanos_version} \
