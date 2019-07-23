@@ -88,7 +88,63 @@ RSpec.describe Terrafying::Components::VPC do
       expect(subnets.count).to eq(@azs.count)
       expect(subnets[0][:tags][:foo]).to eq('bar')
     end
+
+    it 'should drop subnet' do
+      vpc = Terrafying::Components::VPC.create(
+        'foo', '10.75.0.0/16',
+        internet_access: false,
+        subnets: {
+        }
+      )
+      cidrs = %w(10.75.0.0/24
+        10.75.1.0/24
+        10.75.2.0/24
+        10.75.9.0/28
+        10.75.9.16/28
+        10.75.9.32/28
+        10.75.16.0/20
+        10.75.32.0/20
+        10.75.48.0/20
+      )
+
+      cidrs.each {|c| vpc.drop_subnet!(c)}
+      expect(vpc.extract_subnet!(20)).to eq("10.75.64.0/20")
+      expect(vpc.extract_subnet!(28)).to eq("10.75.3.0/28")
+
+    end
+
+    it 'should put new subnet at start' do
+      vpc = Terrafying::Components::VPC.create(
+        'foo', '10.75.0.0/16',
+        internet_access: false,
+        subnets: {
+        }
+      )
+      cidrs = %w(
+        10.75.1.0/24
+        10.75.2.0/24
+      )
+
+      cidrs.each {|c| vpc.drop_subnet!(c)}
+      expect(vpc.extract_subnet!(24)).to eq("10.75.0.0/24")
+    end
+
+  it 'should not drop whole subnet' do
+    vpc = Terrafying::Components::VPC.create(
+      'foo', '10.75.0.0/16',
+      internet_access: false,
+      subnets: {
+      }
+    )
+    cidrs = %w(
+      10.75.1.0/24
+      10.75.0.0/24
+    )
+
+    cidrs.each {|c| vpc.drop_subnet!(c)}
+    expect(vpc.extract_subnet!(24)).to_not eq("10.75.0.0/24")
   end
+end
 
   it 'should create a security group for SSH around the VPC' do
     cidr = '10.1.0.0/16'

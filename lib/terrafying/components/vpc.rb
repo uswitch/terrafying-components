@@ -12,7 +12,7 @@ module Terrafying
     DEFAULT_ZONE = 'vpc.usw.co'
 
     class VPC < Terrafying::Context
-      attr_reader :id, :name, :cidr, :zone, :azs, :subnets, :internal_ssh_security_group, :ssh_group
+      attr_reader :id, :name, :cidr, :zone, :azs, :subnets, :remaining_ip_space, :internal_ssh_security_group, :ssh_group
 
       def self.find(name)
         VPC.new.find name
@@ -32,6 +32,9 @@ module Terrafying
         @name = name
         @id = vpc.vpc_id
         @cidr = vpc.cidr_block
+        @azs = aws.availability_zones
+        @remaining_ip_space = NetAddr::Tree.new
+        @remaining_ip_space.add! cidr
         @tags = {}
         @zone = Terrafying::Components::Zone.find_by_tag(vpc: @id)
         raise 'Failed to find zone' if @zone.nil?
@@ -56,6 +59,17 @@ module Terrafying
 
         # need to sort subnets so they are in az order
         @subnets.each { |_, s| s.sort! { |a, b| a.az <=> b.az } }
+
+        @subnets.each do |_,subnet|
+          subnet.each do |s|
+            drop_subnet!(s.cidr)
+          end
+        end
+
+        @nat_gateways = []
+         aws.nat_gateways_for_vpc(vpc.vpc_id).each do |nat_gateway|
+          @nat_gateways << nat_gateway.nat_gateway_id
+        end
 
         tags = vpc.tags.select { |tag| tag.key == 'ssh_group' }
         @ssh_group = if tags.count > 0
@@ -336,7 +350,6 @@ module Terrafying
         if targets.count == 0
           raise "Run out of ip space to allocate a /#{bit_size}"
         end
-
         target = targets[0]
 
         @remaining_ip_space.delete!(target)
@@ -354,7 +367,26 @@ module Terrafying
         new_subnet.to_s
       end
 
+      def drop_subnet!(raw_cidr)
+
+        cidr = NetAddr::CIDR.create(raw_cidr)
+        bit_size = cidr.bits
+        target = @remaining_ip_space.longest_match(cidr)
+
+        @remaining_ip_space.delete!(target)
+
+        if target.bits != bit_size
+          target.remainder(cidr).each do |rem|
+            @remaining_ip_space.add!(rem)
+          end
+        end
+      end
+
       def allocate_subnets!(name, options = {})
+        allocate_subnets_in!(self, name, options)
+      end
+
+      def allocate_subnets_in!(ctx, name, options = {})
         options = {
           public: false,
           bit_size: @subnet_size,
@@ -369,20 +401,37 @@ module Terrafying
                    else
                      [nil] * @azs.count
                    end
+        if @subnets.has_key?(name.to_sym)
 
-        @subnets[name] = @azs.zip(gateways).map do |az, gateway|
-          subnet_options = { tags: { subnet_name: name }.merge(options[:tags]).merge(@tags) }
-          unless gateway.nil?
-            if options[:public]
-              subnet_options[:gateway] = gateway
-            elsif options[:internet]
-              subnet_options[:nat_gateway] = gateway
+          @subnets[name.to_sym].zip(gateways).map do |subnet, gateway|
+            subnet_options = { tags: { subnet_name: name }.merge(options[:tags]).merge(@tags) }
+            unless gateway.nil?
+              if options[:public]
+                subnet_options[:gateway] = gateway
+              elsif options[:internet]
+                subnet_options[:nat_gateway] = gateway
+              end
             end
+            ctx.add! Terrafying::Components::Subnet.create_in(
+             self, name, subnet.az, subnet.cidr, subnet_options
+            )
           end
 
-          add! Terrafying::Components::Subnet.create_in(
-            self, name, az, extract_subnet!(options[:bit_size]), subnet_options
-          )
+        else
+          @subnets[name] = @azs.zip(gateways).map do |az, gateway|
+            subnet_options = { tags: { subnet_name: name }.merge(options[:tags]).merge(@tags) }
+            unless gateway.nil?
+              if options[:public]
+                subnet_options[:gateway] = gateway
+              elsif options[:internet]
+                subnet_options[:nat_gateway] = gateway
+              end
+            end
+
+            ctx.add! Terrafying::Components::Subnet.create_in(
+             self, name, az, extract_subnet!(options[:bit_size]), subnet_options
+            )
+          end
         end
       end
     end
