@@ -12,7 +12,7 @@ module Terrafying
     DEFAULT_ZONE = 'vpc.usw.co'
 
     class VPC < Terrafying::Context
-      attr_reader :id, :name, :cidr, :zone, :azs, :subnets, :remaining_ip_space, :internal_ssh_security_group, :ssh_group
+      attr_reader :id, :name, :cidr, :zone, :azs, :subnets, :internal_ssh_security_group, :ssh_group
 
       def self.find(name)
         VPC.new.find name
