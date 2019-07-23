@@ -136,12 +136,12 @@ module Terrafying
             @egress_security_group = @instance_set.security_group
           end
 
-          vpc.zone.add_alias_in(self, name, @load_balancer.alias_config)
+          @zone.add_alias_in(self, name, @load_balancer.alias_config)
         elsif set == StaticSet
-          vpc.zone.add_record_in(self, name, @instance_set.instances.map(&:ip_address))
+          @zone.add_record_in(self, name, @instance_set.instances.map(&:ip_address))
           @instance_set.instances.each do |i|
             @domain_names << vpc.zone.qualify(i.name)
-            vpc.zone.add_record_in(self, i.name, [i.ip_address])
+            @zone.add_record_in(self, i.name, [i.ip_address])
           end
         end
 
