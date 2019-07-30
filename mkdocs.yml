@@ -1,0 +1,21 @@
+site_name: terrafying components
+strict: true
+repo_name: "uswitch/terrafying-components"
+repo_url: "https://github.com/uswitch/terrafying-components"
+markdown_extensions:
+- admonition
+- codehilite:
+    linenums: true
+- pymdownx.inlinehilite
+- pymdownx.tasklist:
+    custom_checkbox: true
+- pymdownx.superfences
+- toc:
+    permalink: true
+
+theme:
+  name: 'material'
+
+plugins:
+- search
+- awesome-pages

@@ -15,6 +15,12 @@ pipeline:
     when:
       event: [push, tag]
 
+  docs:
+    image: squidfunk/mkdocs-material:4.0.1
+    commands:
+      - pip install mkdocs-awesome-pages-plugin
+      - mkdocs build
+
   docker:
     image: plugins/docker
     repo: quay.io/uswitch/terrafying-components
