@@ -13,6 +13,9 @@ module Terrafying
       def self.create(name, bucket, options = {})
         LetsEncrypt.new.create name, bucket, options
       end
+      def self.find(name, bucket, options = {})
+        LetsEncrypt.new.find name, bucket, options
+      end
 
       def initialize
         super
@@ -80,6 +83,43 @@ module Terrafying
 
         @source = object_url(@name, :cert)
 
+        resource :aws_s3_bucket_object, "#{@name}-metadata",
+                 bucket: @bucket,
+                 key: File.join('', @prefix, @name, '.metadata'),
+                 content: {
+                   provider: options[:provider].to_s,
+                   public_certificate: options[:public_certificate],
+                   use_external_dns: options[:use_external_dns],
+                 }.to_json
+
+        self
+      end
+
+      def find(name, bucket, prefix: "")
+        @name = name
+        @bucket = bucket
+        @prefix = prefix
+
+        # load the rest of the config from an s3 metadata file
+        metadata_obj = aws.s3_object(@bucket, [@prefix, @name, '.metadata'].compact.reject(&:empty?).join('/'))
+        metadata = JSON.parse(metadata_obj, symbolize_names: true)
+
+        @acme_provider = @acme_providers[metadata[:provider].to_sym]
+        @use_external_dns = metadata[:use_external_dns]
+        @ca_cert_acl = metadata[:public_certificate] ? 'public-read' : 'private'
+
+        account_key_obj = data :aws_s3_bucket_object, "#{@name}-account",
+                               bucket: @bucket,
+                               key: File.join('', @prefix, @name, 'account.key')
+
+        @account_key = account_key_obj["body"]
+
+        open(@acme_provider[:ca_cert], 'rb') do |cert|
+          @ca_cert = cert.read
+        end
+
+        @source = object_url(@name, :cert)
+
         self
       end
 
@@ -128,17 +168,27 @@ module Terrafying
                      certificate_request_pem: output_of(:tls_cert_request, key_ident, :cert_request_pem)
                    }.merge(cert_options)
 
+        key_version = "${sha256(tls_private_key.#{key_ident}.private_key_pem)}"
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-key",
                      bucket: @bucket,
-                     key: File.join('', @prefix, @name, name, "${sha256(tls_private_key.#{key_ident}.private_key_pem)}", 'key'),
+                     key: object_key(name, :key, key_version),
                      content: output_of(:tls_private_key, key_ident, :private_key_pem)
+        ctx.resource :aws_s3_bucket_object, "#{key_ident}-key-latest",
+                     bucket: @bucket,
+                     key: object_key(name, :key, 'latest'),
+                     content: key_version
 
+        cert_version = "${sha256(acme_certificate.#{key_ident}.certificate_pem)}"
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert",
                      bucket: @bucket,
-                     key: File.join('', @prefix, @name, name, "${sha256(acme_certificate.#{key_ident}.certificate_pem)}", 'cert'),
+                     key: object_key(name, :cert, cert_version),
                      content: output_of(:acme_certificate, key_ident, :certificate_pem).to_s + @ca_cert
+        ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert-latest",
+                     bucket: @bucket,
+                     key: object_key(name, :cert, 'latest'),
+                     content: cert_version
 
-        reference_keypair(ctx, name)
+        reference_keypair(ctx, name, key_version: key_version, cert_version: cert_version)
       end
     end
   end

@@ -87,7 +87,28 @@ shared_examples 'a CA' do
       expect(@ca.output['resource']['aws_s3_bucket_object'].values).to(
         include(
           a_hash_including(bucket: bucket_name, key: match(@ca.object_key(keypair[:name], :key, '.*'))),
-          a_hash_including(bucket: bucket_name, key: match(@ca.object_key(keypair[:name], :cert, '.*')))
+          a_hash_including(bucket: bucket_name, key: match(@ca.object_key(keypair[:name], :cert, '.*'))),
+        )
+      )
+    end
+
+    it 'should create a pointer to the latest version of the key and cert' do
+      keypair = @ca.create_keypair('foo')
+
+
+      # we want to check that it references the version in the path of the real key/cert
+      key_re = Regexp.new(@ca.object_key(keypair[:name], :key, '([^l].*)'))
+      cert_re = Regexp.new(@ca.object_key(keypair[:name], :cert, '([^l].*)'))
+
+      objects = @ca.output['resource']['aws_s3_bucket_object'].values
+
+      key_version = objects.map { |obj| key_re.match(obj[:key]) }.compact[0][1]
+      cert_version = objects.map { |obj| cert_re.match(obj[:key]) }.compact[0][1]
+
+      expect(objects).to(
+        include(
+          a_hash_including(bucket: bucket_name, key: match(@ca.object_key(keypair[:name], :key, 'latest')), content: key_version),
+          a_hash_including(bucket: bucket_name, key: match(@ca.object_key(keypair[:name], :cert, 'latest')), content: cert_version)
         )
       )
     end
