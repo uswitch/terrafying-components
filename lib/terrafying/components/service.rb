@@ -46,6 +46,7 @@ module Terrafying
           ports: [],
           instances: [{}],
           zone: vpc.zone,
+          cross_zone_load_balancing: false,
           iam_policy_statements: [],
           security_groups: [],
           keypairs: [],
@@ -99,6 +100,8 @@ module Terrafying
 
         if options.key?(:loadbalancer) # explicitly requested or rejected a loadbalancer
           wants_load_balancer = options[:loadbalancer]
+        elsif options[:cross_zone_load_balancing] # indirect request for an LB
+          wants_load_balancer = true
         else
           # by default we want one if we are an ASG with exposed ports
           wants_load_balancer = set == DynamicSet && @ports.count > 0
@@ -125,7 +128,8 @@ module Terrafying
           @load_balancer = add! LoadBalancer.create_in(
             vpc, name, options.merge(
                          subnets: options[:loadbalancer_subnets],
-                         tags: tags
+                         tags: tags,
+                         cross_zone_load_balancing: options[:cross_zone_load_balancing]
                        )
           )
 

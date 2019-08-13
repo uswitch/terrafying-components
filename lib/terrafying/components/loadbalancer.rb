@@ -70,6 +70,7 @@ module Terrafying
           ports: [],
           public: false,
           subnets: vpc.subnets.fetch(:private, []),
+          cross_zone_load_balancing: false,
           hex_ident: false,
           idle_timeout: nil,
           tags: {},
@@ -117,6 +118,7 @@ module Terrafying
           tags: @tags
         }.merge(subnets_for(options[:subnets]))
               .merge(application? ? { security_groups: [@security_group] + options[:security_groups], idle_timeout: options[:idle_timeout], access_logs: options[:access_logs] } : {})
+              .merge(network? ? { enable_cross_zone_load_balancing: options[:cross_zone_load_balancing] } : {})
               .compact
 
         @targets = []

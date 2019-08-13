@@ -135,6 +135,18 @@ RSpec.describe Terrafying::Components::LoadBalancer do
       )
     end
 
+    it 'should ignore cross_zone_load_balancing option' do
+      lb = Terrafying::Components::LoadBalancer.create_in(
+        @vpc, 'test-alb',
+        ports: [{ type: 'https', number: 443, ssl_certificate: 'some-arn' }],
+        cross_zone_load_balancing: true
+      )
+
+      lb_resource = lb.output_with_children['resource']['aws_lb'].values.first
+
+      expect(lb_resource).to not_include(:enable_cross_zone_load_balancing)
+    end
+
     context('ssl certificates') do
       it('should use the first cert passed as a string') do
         lb = Terrafying::Components::LoadBalancer.create_in(
@@ -318,6 +330,26 @@ RSpec.describe Terrafying::Components::LoadBalancer do
         ],
         security_groups: ['sg-000']
       )
+    end
+
+    it 'should disable the cross-zone load-balancing if not specified' do
+      lb = Terrafying::Components::LoadBalancer.create_in(
+        @vpc, 'test-nlb', ports: [{ type: 'tcp', number: 22 }]
+      )
+
+      lb_resource = lb.output_with_children['resource']['aws_lb'].values.first
+
+      expect(lb_resource).to include(enable_cross_zone_load_balancing: false)
+    end
+
+    it 'should enable the cross-zone load-balancing if specified' do
+      lb = Terrafying::Components::LoadBalancer.create_in(
+        @vpc, 'test-nlb', ports: [{ type: 'tcp', number: 22 }], cross_zone_load_balancing: true
+      )
+
+      lb_resource = lb.output_with_children['resource']['aws_lb'].values.first
+
+      expect(lb_resource).to include(enable_cross_zone_load_balancing: true)
     end
   end
 end
