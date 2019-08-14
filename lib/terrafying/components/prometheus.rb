@@ -22,7 +22,7 @@ module Terrafying
         thanos_name: 'thanos',
         thanos_version: 'v0.5.0',
         prom_name: 'prometheus',
-        prom_version: 'v2.10.0',
+        prom_version: 'v2.11.2',
         instances: 2,
         instance_type: 't3a.small',
         thanos_instance_type: 't3a.small',
