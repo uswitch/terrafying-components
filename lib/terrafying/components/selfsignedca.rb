@@ -158,17 +158,27 @@ module Terrafying
                      validity_period_hours: options[:validity_in_hours],
                      allowed_uses: options[:allowed_uses]
 
+        key_version = "${sha256(tls_private_key.#{key_ident}.private_key_pem)}"
         ctx.resource :aws_s3_bucket_object, object_name(name, :key),
                      bucket: @bucket,
-                     key: object_key(name, :key, "${sha256(tls_private_key.#{key_ident}.private_key_pem)}"),
+                     key: object_key(name, :key, key_version),
                      content: output_of(:tls_private_key, key_ident, :private_key_pem)
+        ctx.resource :aws_s3_bucket_object, "#{key_ident}-key-latest",
+                     bucket: @bucket,
+                     key: object_key(name, :key, 'latest'),
+                     content: key_version
 
+        cert_version = "${sha256(tls_locally_signed_cert.#{key_ident}.cert_pem)}"
         ctx.resource :aws_s3_bucket_object, object_name(name, :cert),
                      bucket: @bucket,
-                     key: object_key(name, :cert, "${sha256(tls_locally_signed_cert.#{key_ident}.cert_pem)}"),
+                     key: object_key(name, :cert, cert_version),
                      content: output_of(:tls_locally_signed_cert, key_ident, :cert_pem)
+        ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert-latest",
+                     bucket: @bucket,
+                     key: object_key(name, :cert, 'latest'),
+                     content: cert_version
 
-        reference_keypair(ctx, name)
+        reference_keypair(ctx, name, key_version: key_version, cert_version: cert_version)
       end
     end
   end
