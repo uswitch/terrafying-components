@@ -20,7 +20,7 @@ module Terrafying
       def initialize(
         vpc:,
         thanos_name: 'thanos',
-        thanos_version: 'v0.5.0',
+        thanos_version: 'v0.7.0',
         prom_name: 'prometheus',
         prom_version: 'v2.12.0',
         instances: 2,
@@ -205,13 +205,13 @@ module Terrafying
             [Service]
             ExecStartPre=-/usr/bin/docker kill thanos
             ExecStartPre=-/usr/bin/docker rm thanos
-            ExecStartPre=/usr/bin/docker pull improbable/thanos:#{@thanos_version}
+            ExecStartPre=/usr/bin/docker pull quay.io/thanos/thanos:#{@thanos_version}
             ExecStart=/usr/bin/docker run --name thanos \
               -p 10901-10902:10901-10902 \
               -v #{@prometheus_data_dir}:/var/lib/prometheus \
               -v /opt/thanos:/opt/thanos \
               --network=prom \
-              improbable/thanos:#{@thanos_version} \
+              quay.io/thanos/thanos:#{@thanos_version} \
               sidecar \
               --prometheus.url=http://prometheus:9090 \
               --tsdb.path=/var/lib/prometheus/tsdb \
@@ -290,10 +290,10 @@ module Terrafying
             [Service]
             ExecStartPre=-/usr/bin/docker kill thanos
             ExecStartPre=-/usr/bin/docker rm thanos
-            ExecStartPre=/usr/bin/docker pull improbable/thanos:#{@thanos_version}
+            ExecStartPre=/usr/bin/docker pull quay.io/thanos/thanos:#{@thanos_version}
             ExecStart=/usr/bin/docker run --name thanos \
               -p 10901-10902:10901-10902 \
-              improbable/thanos:#{@thanos_version} \
+              quay.io/thanos/thanos:#{@thanos_version} \
               query \
               --query.replica-label=replica \
               --query.max-concurrent=#{@thanos_instance_vcpu_count} \
