@@ -92,6 +92,10 @@ module Terrafying
           ssh_group: DEFAULT_SSH_GROUP
         }.merge(options)
 
+        if !options[:provider].nil?
+          @opts_provider = options[:provider]
+        end
+
         if options[:parent_zone].nil?
           options[:parent_zone] = Zone.find(DEFAULT_ZONE)
         end
