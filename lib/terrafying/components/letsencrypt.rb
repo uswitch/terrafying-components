@@ -35,6 +35,35 @@ module Terrafying
         }
       end
 
+      def create_lambda(name, bucket, options={})
+        options = {
+          prefix: "/path/to/ca",
+          #provider: :staging,
+        }.merge(options)
+
+        @name = name
+        @bucket = bucket
+        @prefix = options[:prefix]
+
+        resource :aws_lambda_function, "#{@name}-lambda", {
+          filename: "./certbot-lambda/main.zip", #do this from S3
+          function_name: "lambda_handler",
+          role: "${aws_iam_role.iam_for_lambda.arn}",
+          handler: "main",
+          # The filebase64sha256() function is available in Terraform 0.11.12 and later
+          # For Terraform 0.11.11 and earlier, use the base64sha256() function and the file() function:
+          # source_code_hash = "${base64sha256(file("lambda_function_payload.zip"))}"
+          source_code_hash: "${filebase64sha256(\"./certbot-lambda/main.zip\")}",
+          runtime: "python3.7",
+          environment:{
+            variables: {
+              CA_BUCKET: @bucket,
+              CA_PREFIX: @prefix,
+            }
+          }
+        }
+      end
+
       def create(name, bucket, options={})
         options = {
           prefix: "",
