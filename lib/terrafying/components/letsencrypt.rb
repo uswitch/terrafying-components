@@ -13,6 +13,7 @@ module Terrafying
 
       def self.create(name, bucket, options={})
         LetsEncrypt.new.create name, bucket, options
+        LetsEncrypt.new.renew name, bucket, options
       end
 
       def initialize
@@ -31,35 +32,6 @@ module Terrafying
             url: 'https://acme-v02.api.letsencrypt.org/directory',
             ref: provider(:acme, alias: :live, server_url: 'https://acme-v02.api.letsencrypt.org/directory'),
             ca_cert: 'https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt'
-          }
-        }
-      end
-
-      def create_lambda(name, bucket, options={})
-        options = {
-          prefix: "/path/to/ca",
-          #provider: :staging,
-        }.merge(options)
-
-        @name = name
-        @bucket = bucket
-        @prefix = options[:prefix]
-
-        resource :aws_lambda_function, "#{@name}-lambda", {
-          filename: "./certbot-lambda/main.zip", #do this from S3
-          function_name: "lambda_handler",
-          role: "${aws_iam_role.iam_for_lambda.arn}",
-          handler: "main",
-          # The filebase64sha256() function is available in Terraform 0.11.12 and later
-          # For Terraform 0.11.11 and earlier, use the base64sha256() function and the file() function:
-          # source_code_hash = "${base64sha256(file("lambda_function_payload.zip"))}"
-          source_code_hash: "${filebase64sha256(\"./certbot-lambda/main.zip\")}",
-          runtime: "python3.7",
-          environment:{
-            variables: {
-              CA_BUCKET: @bucket,
-              CA_PREFIX: @prefix,
-            }
           }
         }
       end
@@ -184,6 +156,48 @@ module Terrafying
 
         reference_keypair(ctx, name)
       end
+
+      def renew(name, bucket, options={})
+        options = {
+          prefix: "",
+          provider: :staging,
+        }.merge(options)
+
+        @name = name
+        @bucket = bucket
+        @prefix = options[:prefix]
+
+        resource :aws_lambda_function, "#{@name}-lambda", {
+          s3_bucket: "uswitch-certbot-lambda",
+          s3_key: "certbot-lambda.zip",
+          handler: "main.handler",
+          # The filebase64sha256() function is available in Terraform 0.11.12 and later
+          # For Terraform 0.11.11 and earlier, use the base64sha256() function and the file() function:
+          # source_code_hash = "${base64sha256(file("lambda_function_payload.zip"))}"
+          source_code_hash: "${filebase64sha256(\"certbot-lambda.zip\")}",
+          runtime: "python3.7",
+          role: "${aws_iam_role.certbot_lambda_execution.arn}", # do this bit
+          environment:{
+            variables: {
+              CA_BUCKET: @bucket,
+              CA_PREFIX: @prefix,
+            }
+          }
+        }
+        # Lambda execution role
+        aws_iam_role :certbot_lambda_execution, {
+          name: "certbot_lambda_execution",
+          assume_role_policy: IAM::AssumePolicy.new
+                              .service_principal('lambda.amazonaws.com')
+                              .policy.to_json
+        }
+
+        # Lambda execution role policy to read/write certs to S3
+        add! S3::Policy.create('certbot-lambda-execution_s3')
+                       .bucket('uswitch-letsencrypt')
+                         .prefix('yggdrasil').allow(:read, :write)
+                       .attach_to_roles('certbot_lambda_execution')
+        end
 
     end
   end
