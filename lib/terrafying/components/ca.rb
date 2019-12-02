@@ -23,7 +23,9 @@ module Terrafying
         if ca? name
           File.join('', @prefix, @name, "ca.#{type}")
         else
-          File.join('', @prefix, @name, name, type.to_s)
+          raise 'A non-ca object must have a version' if version.empty?
+
+          File.join('', @prefix, @name, name, version, type.to_s)
         end
       end
 
