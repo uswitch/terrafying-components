@@ -12,10 +12,12 @@ module Terrafying
 
       def self.create(name, bucket, options = {})
         LetsEncrypt.new.create name, bucket, options
-        LetsEncrypt.new.renew name, bucket, options
       end
       def self.find(name, bucket, options = {})
         LetsEncrypt.new.find name, bucket, options
+      end
+      def self.renew(name, bucket, options = {})
+      LetsEncrypt.new.renew name, bucket, options
       end
 
       def initialize
@@ -56,10 +58,10 @@ module Terrafying
 
         provider :tls, {}
 
-        resource :tls_private_key, "#{@name}-account", {
-                   algorithm: "RSA",
-                 }
-        
+        resource :tls_private_key, "#{@name}-account",
+                  algorithm: "ECDSA",
+                  ecdsa_curve: options[:curve]
+
         resource :acme_registration, "#{@name}-reg",
                  provider: @acme_provider[:ref],
                  account_key_pem: output_of(:tls_private_key, "#{@name}-account", 'private_key_pem'),
@@ -165,35 +167,41 @@ module Terrafying
         cert_options[:recursive_nameservers] = ['1.1.1.1:53', '8.8.8.8:53', '8.8.4.4:53'] if @use_external_dns
 
         ctx.resource :acme_certificate, key_ident, {
-                       provider: @acme_provider[:ref],
-                       account_key_pem: @account_key,
-                       min_days_remaining: 0, # the lambda will take over renewal
-                       dns_challenge: {
-                         provider: "route53",
-                       },
-                       certificate_request_pem: output_of(:tls_cert_request, key_ident, :cert_request_pem),
-                     }
+                     provider: @acme_provider[:ref],
+                     account_key_pem: @account_key,
+                     min_days_remaining: options[:min_days_remaining],
+                     dns_challenge: {
+                       provider: 'route53'
+                     },
+                     certificate_request_pem: output_of(:tls_cert_request, key_ident, :cert_request_pem)
+                   }.merge(cert_options)
 
-        ctx.resource :aws_s3_bucket_object, "#{key_ident}-key", {
-                       bucket: @bucket,
-                       key: File.join('', @prefix, @name, name, "key"),
-                       content: output_of(:tls_private_key, key_ident, :private_key_pem),
-                     }
+        key_version = "${sha256(tls_private_key.#{key_ident}.private_key_pem)}"
 
-        ctx.resource :aws_s3_bucket_object, "#{key_ident}-csr", {
-                       bucket: @bucket,
-                       key: File.join('', @prefix, @name, name, "csr"),
-                       content: output_of(:tls_cert_request, key_ident, :cert_request_pem),
-                     }
+        ctx.resource :aws_s3_bucket_object, "#{key_ident}-key",
+                     bucket: @bucket,
+                     key: object_key(name, :key, key_version),
+                     content: output_of(:tls_private_key, key_ident, :private_key_pem)
 
-        ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert", {
-                       bucket: @bucket,
-                       key: File.join('', @prefix, @name, name, "cert"),
-                       content: output_of(:acme_certificate, key_ident, :certificate_pem).to_s + @ca_cert,
-                       lifecycle: { ignore_changes: [ "content" ] }, # the lambda will be updating it
-                     }
+        ctx.resource :aws_s3_bucket_object, "#{key_ident}-key-latest",
+                     bucket: @bucket,
+                     key: object_key(name, :key, 'latest'),
+                     content: key_version
 
-        reference_keypair(ctx, name)
+       cert_version = "${sha256(acme_certificate.#{key_ident}.certificate_pem)}"
+
+       ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert",
+                    bucket: @bucket,
+                    key: object_key(name, :cert, cert_version),
+                    content: output_of(:acme_certificate, key_ident, :certificate_pem).to_s + @ca_cert,
+                    lifecycle: { ignore_changes: [ "content" ] } # the lambda will be updating it
+
+       ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert-latest",
+                    bucket: @bucket,
+                    key: object_key(name, :cert, 'latest'),
+                    content: cert_version
+
+       reference_keypair(ctx, name, key_version: key_version, cert_version: cert_version)
       end
 
       def renew(name, bucket, options={})
@@ -215,7 +223,7 @@ module Terrafying
           # source_code_hash = "${base64sha256(file("lambda_function_payload.zip"))}"
           source_code_hash: "${filebase64sha256(\"certbot-lambda.zip\")}",
           runtime: "python3.7",
-          role: "${aws_iam_role.certbot_lambda_execution.arn}", # do this bit
+          role: "${aws_iam_role.#{@name}_lambda_execution.arn}",
           environment:{
             variables: {
               CA_BUCKET: @bucket,
@@ -224,18 +232,34 @@ module Terrafying
           }
         }
         # Lambda execution role
-        aws_iam_role :certbot_lambda_execution, {
-          name: "certbot_lambda_execution",
-          assume_role_policy: IAM::AssumePolicy.new
-                              .service_principal('lambda.amazonaws.com')
-                              .policy.to_json
-        }
-
-        # Lambda execution role policy to read/write certs to S3
-        add! S3::Policy.create('certbot-lambda-execution_s3')
-                       .bucket('uswitch-letsencrypt')
-                         .prefix('yggdrasil').allow(:read, :write)
-                       .attach_to_roles('certbot_lambda_execution')
+        resource :aws_iam_role, "#{@name}_lambda_execution", {
+          name: "#{@name}_lambda_execution",
+          assume_role_policy: JSON.pretty_generate(
+                {
+                  Version: "2012-10-17",
+                  Statement: [
+                    {
+                      Action: "sts:AssumeRole",
+                      Principal: {
+                        Service: "lambda.amazonaws.com"
+                        },
+                      Effect: "Allow",
+                      Sid: ""
+                    },
+                    {
+                      Action: [
+                        "s3:Put*",
+                        "s3:Get*",
+                        "s3:DeleteObject"
+                        ],
+                      Resource: ["arn:aws:s3:::#{@bucket}/#{@prefix}"],
+                      Effect: "Allow"
+                    }
+                  ]
+                }
+              )
+            }
+          self
         end
 
     end
