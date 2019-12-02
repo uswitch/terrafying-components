@@ -9,90 +9,84 @@ require 'terrafying/components/staticset'
 RSpec::Matchers.define_negated_matcher :not_include, :include
 
 RSpec.describe Terrafying::Components::LoadBalancer do
-
-  it_behaves_like "a usable resource"
+  it_behaves_like 'a usable resource'
 
   before do
-    @vpc = stub_vpc("a-vpc", "10.0.0.0/16")
+    @vpc = stub_vpc('a-vpc', '10.0.0.0/16')
   end
 
-  it "should error on a mix of layer 4 and 7 ports" do
-    expect {
+  it 'should error on a mix of layer 4 and 7 ports' do
+    expect do
       Terrafying::Components::LoadBalancer.create_in(
-        @vpc, "foo", {
-          ports: [
-            { type: "tcp", number: 1234 },
-            { type: "https", number: 443 },
-          ],
-        }
+        @vpc, 'foo',
+        ports: [
+          { type: 'tcp', number: 1234 },
+          { type: 'https', number: 443 }
+        ]
       )
-    }.to raise_error RuntimeError
+    end.to raise_error RuntimeError
   end
 
-  it "should create an ALB when only layer 7" do
+  it 'should create an ALB when only layer 7' do
     lb = Terrafying::Components::LoadBalancer.create_in(
-      @vpc, "foo", {
-        ports: [
-          { type: "https", number: 443 },
-        ],
-      }
+      @vpc, 'foo',
+      ports: [
+        { type: 'https', number: 443 }
+      ]
     )
 
-    expect(lb.type).to eq("application")
+    expect(lb.type).to eq('application')
   end
 
-  it "should create an NLB when only layer 4" do
+  it 'should create an NLB when only layer 4' do
     lb = Terrafying::Components::LoadBalancer.create_in(
-      @vpc, "foo", {
-        ports: [
-          { type: "tcp", number: 1234 },
-        ],
-      }
+      @vpc, 'foo',
+      ports: [
+        { type: 'tcp', number: 1234 }
+      ]
     )
 
-    expect(lb.type).to eq("network")
+    expect(lb.type).to eq('network')
   end
 
-  it "if a port defines a ssl cert it should be added to the listener" do
+  it 'if a port defines a ssl cert it should be added to the listener' do
     lb = Terrafying::Components::LoadBalancer.create_in(
-      @vpc, "foo", {
-        ports: [
-          { type: "https", number: 443, ssl_certificate: "some-arn" },
-        ],
-      }
+      @vpc, 'foo',
+      ports: [
+        { type: 'https', number: 443, ssl_certificate: 'some-arn' }
+      ]
     )
 
-    expect(lb.output["resource"]["aws_lb_listener"].count).to eq(1)
+    expect(lb.output['resource']['aws_lb_listener'].count).to eq(1)
 
-    listener = lb.output["resource"]["aws_lb_listener"].values.first
+    listener = lb.output['resource']['aws_lb_listener'].values.first
 
     expect(listener[:ssl_policy]).to_not be nil
-    expect(listener[:certificate_arn]).to eq("some-arn")
+    expect(listener[:certificate_arn]).to eq('some-arn')
   end
 
-  it "should map usable to attached set when NLB" do
-    set = Terrafying::Components::StaticSet.create_in(@vpc, "wibble")
+  it 'should map usable to attached set when NLB' do
+    set = Terrafying::Components::StaticSet.create_in(@vpc, 'wibble')
     lb = Terrafying::Components::LoadBalancer.create_in(
-      @vpc, "foo", {
-        ports: [
-          { type: "tcp", number: 1234 },
-        ],
-      }
+      @vpc, 'foo',
+      ports: [
+        { type: 'tcp', number: 1234 }
+      ]
     )
 
     lb.attach(set)
-    lb.used_by_cidr("1.2.3.4/32")
+    lb.used_by_cidr('1.2.3.4/32')
 
-    sg_rules = lb.output_with_children["resource"].fetch("aws_security_group_rule", {}).values
+    sg_rules = lb.output_with_children['resource'].fetch('aws_security_group_rule', {}).values
 
     expect(sg_rules.count).to eq(1)
     expect(sg_rules[0][:security_group_id]).to eq(set.ingress_security_group)
-    expect(sg_rules[0][:cidr_blocks]).to eq(["1.2.3.4/32"])
+    expect(sg_rules[0][:cidr_blocks]).to eq(['1.2.3.4/32'])
   end
 
-  it "should have a name with at most 32 characters" do
+  it 'should have a name with at most 32 characters' do
     lb = Terrafying::Components::LoadBalancer.create_in(
-      @vpc, "abcdefghijklmnopqrstuvwxyz123456789", {}
+      @vpc, 'abcdefghijklmnopqrstuvwxyz123456789', {}
     )
     expect(lb.name.length).to be <= 32
   end
@@ -129,16 +123,28 @@ RSpec.describe Terrafying::Components::LoadBalancer do
       lb = Terrafying::Components::LoadBalancer.create_in(
         @vpc, 'test-alb',
         ports: [{ type: 'https', number: 443, ssl_certificate: 'some-arn' }],
-        security_groups: ["sg-000"],
+        security_groups: ['sg-000']
       )
 
       lb_resource = lb.output_with_children['resource']['aws_lb'].values.first
 
       expect(lb_resource).to include(
         security_groups: a_collection_including(
-          "sg-000",
+          'sg-000'
         )
       )
+    end
+
+    it 'should ignore cross_zone_load_balancing option' do
+      lb = Terrafying::Components::LoadBalancer.create_in(
+        @vpc, 'test-alb',
+        ports: [{ type: 'https', number: 443, ssl_certificate: 'some-arn' }],
+        cross_zone_load_balancing: true
+      )
+
+      lb_resource = lb.output_with_children['resource']['aws_lb'].values.first
+
+      expect(lb_resource).to not_include(:enable_cross_zone_load_balancing)
     end
 
     context('ssl certificates') do
@@ -268,18 +274,18 @@ RSpec.describe Terrafying::Components::LoadBalancer do
         @vpc, 'test-alb', ports: [
           { type: 'http',  number: 80 },
           { type: 'https', number: 443 },
-          { type: 'https', number: 4433, action: { type: 'redirect', redirect: {} } },
+          { type: 'https', number: 4433, action: { type: 'redirect', redirect: {} } }
         ]
       )
 
       expect(lb.targets.size).to eq(2)
       expect(lb.targets).to contain_exactly(
         have_attributes(
-          listener:     '${aws_lb_listener.application-a-vpc-test-alb-80.id}',
+          listener: '${aws_lb_listener.application-a-vpc-test-alb-80.id}',
           target_group: '${aws_lb_target_group.application-a-vpc-test-alb-80.id}'
         ),
         have_attributes(
-          listener:     '${aws_lb_listener.application-a-vpc-test-alb-443.id}',
+          listener: '${aws_lb_listener.application-a-vpc-test-alb-443.id}',
           target_group: '${aws_lb_target_group.application-a-vpc-test-alb-443.id}'
         )
       )
@@ -298,7 +304,7 @@ RSpec.describe Terrafying::Components::LoadBalancer do
         subnets: a_collection_including(
           '${aws_subnet.a-vpc-private-eu-west-1a.id}',
           '${aws_subnet.a-vpc-private-eu-west-1b.id}',
-          '${aws_subnet.a-vpc-private-eu-west-1c.id}',
+          '${aws_subnet.a-vpc-private-eu-west-1c.id}'
         )
       )
     end
@@ -314,17 +320,36 @@ RSpec.describe Terrafying::Components::LoadBalancer do
     end
     it 'should warn if you try and set security groups' do
       expect_any_instance_of(Terrafying::Components::LoadBalancer).to receive(:warn).with(
-        matching("You cannot set security groups on a network loadbalancer, set them on the instances behind it.")
+        matching('You cannot set security groups on a network loadbalancer, set them on the instances behind it.')
       ).at_least(:once)
 
       described_class.create_in(
-        @vpc, "foo", {
-          ports: [
-            { type: "tcp", number: 1234 },
-          ],
-          security_groups: [ "sg-000" ],
-        }
+        @vpc, 'foo',
+        ports: [
+          { type: 'tcp', number: 1234 }
+        ],
+        security_groups: ['sg-000']
       )
+    end
+
+    it 'should disable the cross-zone load-balancing if not specified' do
+      lb = Terrafying::Components::LoadBalancer.create_in(
+        @vpc, 'test-nlb', ports: [{ type: 'tcp', number: 22 }]
+      )
+
+      lb_resource = lb.output_with_children['resource']['aws_lb'].values.first
+
+      expect(lb_resource).to include(enable_cross_zone_load_balancing: false)
+    end
+
+    it 'should enable the cross-zone load-balancing if specified' do
+      lb = Terrafying::Components::LoadBalancer.create_in(
+        @vpc, 'test-nlb', ports: [{ type: 'tcp', number: 22 }], cross_zone_load_balancing: true
+      )
+
+      lb_resource = lb.output_with_children['resource']['aws_lb'].values.first
+
+      expect(lb_resource).to include(enable_cross_zone_load_balancing: true)
     end
   end
 end

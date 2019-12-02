@@ -6,14 +6,16 @@ require 'open-uri'
 module Terrafying
   module Components
     class LetsEncrypt < Terrafying::Context
-
       attr_reader :name, :source
 
       include CA
 
-      def self.create(name, bucket, options={})
+      def self.create(name, bucket, options = {})
         LetsEncrypt.new.create name, bucket, options
         LetsEncrypt.new.renew name, bucket, options
+      end
+      def self.find(name, bucket, options = {})
+        LetsEncrypt.new.find name, bucket, options
       end
 
       def initialize
@@ -36,39 +38,39 @@ module Terrafying
         }
       end
 
-      def create(name, bucket, options={})
+      def create(name, bucket, options = {})
         options = {
-          prefix: "",
+          prefix: '',
           provider: :staging,
-          email_address: "cloud@uswitch.com",
+          email_address: 'cloud@uswitch.com',
           public_certificate: false,
-          curve: "P384",
+          curve: 'P384',
+          use_external_dns: false
         }.merge(options)
 
         @name = name
         @bucket = bucket
         @prefix = options[:prefix]
         @acme_provider = @acme_providers[options[:provider]]
+        @use_external_dns = options[:use_external_dns]
 
         provider :tls, {}
 
         resource :tls_private_key, "#{@name}-account", {
                    algorithm: "RSA",
                  }
-
-        resource :acme_registration, "#{@name}-reg", {
-          provider: @acme_provider[:ref],
-          account_key_pem: output_of(:tls_private_key, "#{@name}-account", "private_key_pem"),
-          email_address: options[:email_address],
-        }
+        
+        resource :acme_registration, "#{@name}-reg",
+                 provider: @acme_provider[:ref],
+                 account_key_pem: output_of(:tls_private_key, "#{@name}-account", 'private_key_pem'),
+                 email_address: options[:email_address]
 
         @account_key = output_of(:acme_registration, "#{@name}-reg", 'account_key_pem')
 
-        resource :aws_s3_bucket_object, "#{@name}-account", {
-          bucket: @bucket,
-          key: File.join('', @prefix, @name, "account.key"),
-          content: @account_key,
-        }
+        resource :aws_s3_bucket_object, "#{@name}-account",
+                 bucket: @bucket,
+                 key: File.join('', @prefix, @name, 'account.key'),
+                 content: @account_key
 
         resource :aws_s3_bucket_object, "#{@name}-config", {
           bucket: @bucket,
@@ -86,19 +88,55 @@ module Terrafying
           @ca_cert = cert.read
         end
 
-        resource :aws_s3_bucket_object, object_name(@name, :cert), {
-          bucket: @bucket,
-          key: object_key(@name, :cert),
-          content: @ca_cert,
-          acl: @ca_cert_acl
-        }
+        resource :aws_s3_bucket_object, object_name(@name, :cert),
+                 bucket: @bucket,
+                 key: object_key(@name, :cert),
+                 content: @ca_cert,
+                 acl: @ca_cert_acl
+
+        @source = object_url(@name, :cert)
+
+        resource :aws_s3_bucket_object, "#{@name}-metadata",
+                 bucket: @bucket,
+                 key: File.join('', @prefix, @name, '.metadata'),
+                 content: {
+                   provider: options[:provider].to_s,
+                   public_certificate: options[:public_certificate],
+                   use_external_dns: options[:use_external_dns],
+                 }.to_json
+
+        self
+      end
+
+      def find(name, bucket, prefix: "")
+        @name = name
+        @bucket = bucket
+        @prefix = prefix
+
+        # load the rest of the config from an s3 metadata file
+        metadata_obj = aws.s3_object(@bucket, [@prefix, @name, '.metadata'].compact.reject(&:empty?).join('/'))
+        metadata = JSON.parse(metadata_obj, symbolize_names: true)
+
+        @acme_provider = @acme_providers[metadata[:provider].to_sym]
+        @use_external_dns = metadata[:use_external_dns]
+        @ca_cert_acl = metadata[:public_certificate] ? 'public-read' : 'private'
+
+        account_key_obj = data :aws_s3_bucket_object, "#{@name}-account",
+                               bucket: @bucket,
+                               key: File.join('', @prefix, @name, 'account.key')
+
+        @account_key = account_key_obj["body"]
+
+        open(@acme_provider[:ca_cert], 'rb') do |cert|
+          @ca_cert = cert.read
+        end
 
         @source = object_url(@name, :cert)
 
         self
       end
 
-      def create_keypair_in(ctx, name, options={})
+      def create_keypair_in(ctx, name, options = {})
         options = {
           common_name: name,
           organization: "uSwitch Limited",
@@ -109,21 +147,22 @@ module Terrafying
 
         key_ident = "#{@name}-#{tf_safe(name)}"
 
-        ctx.resource :tls_private_key, key_ident, {
-                       algorithm: "ECDSA",
-                       ecdsa_curve: options[:curve],
-                     }
+        ctx.resource :tls_private_key, key_ident,
+                     algorithm: 'ECDSA',
+                     ecdsa_curve: options[:curve]
 
-        ctx.resource :tls_cert_request, key_ident, {
-                       key_algorithm: "ECDSA",
-                       private_key_pem: output_of(:tls_private_key, key_ident, :private_key_pem),
-                       subject: {
-                         common_name: options[:common_name],
-                         organization: options[:organization],
-                       },
-                       dns_names: options[:dns_names],
-                       ip_addresses: options[:ip_addresses],
-                     }
+        ctx.resource :tls_cert_request, key_ident,
+                     key_algorithm: 'ECDSA',
+                     private_key_pem: output_of(:tls_private_key, key_ident, :private_key_pem),
+                     subject: {
+                       common_name: options[:common_name],
+                       organization: options[:organization]
+                     },
+                     dns_names: options[:dns_names],
+                     ip_addresses: options[:ip_addresses]
+
+        cert_options = {}
+        cert_options[:recursive_nameservers] = ['1.1.1.1:53', '8.8.8.8:53', '8.8.4.4:53'] if @use_external_dns
 
         ctx.resource :acme_certificate, key_ident, {
                        provider: @acme_provider[:ref],

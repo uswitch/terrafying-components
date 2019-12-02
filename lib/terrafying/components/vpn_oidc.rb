@@ -1,9 +1,11 @@
+
 # frozen_string_literal: true
 
 require 'digest'
 require 'netaddr'
 
 require 'terrafying/components/ignition'
+require 'terrafying/components/service'
 require 'terrafying/generator'
 
 IN4MASK = 0xffffffff
@@ -23,89 +25,79 @@ end
 
 module Terrafying
   module Components
-    class VPN < Terrafying::Context
+    class OIDCVPN < Terrafying::Context
       attr_reader :name, :cidr, :service, :ip_address
 
-      def self.create_in(vpc, name, provider, options = {})
-        VPN.new.create_in vpc, name, provider, options
+      def self.create_in(options)
+        new(**options).tap(&:create_in)
       end
 
-      def initialize
-        super
-      end
-
-      def create_in(vpc, name, oauth2_provider, options = {})
-        options = {
-          group: 'uSwitch Developers',
-          cidr: '10.8.0.0/24',
-          public: true,
-          subnets: vpc.subnets.fetch(:public, []),
-          static: false,
-          route_all_traffic: false,
-          route_dns_entries: [],
-          units: [],
-          tags: {},
-          service: {}
-        }.merge(options)
-
-        @name = name
+      def initialize(
+        vpc:,
+        name:,
+        client_id:,
+        issuer_url:,
+        ca: nil,
+        groups: [],
+        cidr: '10.8.0.0/24',
+        public: true,
+        subnets: vpc.subnets.fetch(:public, []),
+        static: false,
+        route_all_traffic: false,
+        route_dns_entries: [],
+        units: [],
+        tags: {},
+        service_options: {}
+      )
+        super()
         @vpc = vpc
-        @cidr = options[:cidr]
+        @name = name
+        @client_id = client_id
+        @issuer_url = issuer_url
+        @ca = ca
+        @groups = groups
+        @cidr = cidr
         @fqdn = vpc.zone.qualify(name)
+        @public = public
+        @subnets = subnets
+        @static = static
+        @route_all_traffic = route_all_traffic
+        @route_dns_entries = route_dns_entries
+        @units = units
+        @tags = tags
+        @service_options = service_options
+      end
 
-        unless oauth2_provider.is_a?(Hash)
-          raise 'You need to give a provider hash containing a type, client_id and client_secret'
-        end
-
-        has_provider = oauth2_provider[:type] != 'none'
-
-        if has_provider && !%i[type client_id client_secret].all? { |k| oauth2_provider.key?(k) }
-          raise 'You need to set type, client_id and client_secret'
-        end
-
+      def create_in
         units = [
           openvpn_service,
-          openvpn_authz_service(options[:route_all_traffic], options[:route_dns_entries]),
-          caddy_service(options[:ca])
+          openvpn_authz_service(@ca, @fqdn, @route_all_traffic, @route_dns_entries, @groups, @client_id, @issuer_url),
         ]
         files = [
           openvpn_conf,
           openvpn_env,
           openvpn_ip_delay,
-          caddy_conf(options[:ca], has_provider)
         ]
         keypairs = []
+        keypairs.push(@ca.create_keypair_in(self, @fqdn)) if @ca
 
-        if has_provider
-          vpn_hash = Digest::SHA512.hexdigest(vpc.name + name + oauth2_provider[:client_secret] + oauth2_provider[:client_id])
-          oauth2_provider[:cookie_hash_key]  ||= vpn_hash.byteslice(0, 64)
-          oauth2_provider[:cookie_block_key] ||= vpn_hash.byteslice(64, 32)
-
-          units.push(oauth2_proxy_service(oauth2_provider))
-        end
-
-        if options.key?(:ca)
-          keypairs.push(options[:ca].create_keypair_in(self, @fqdn))
-        end
-
-        if options[:static]
-          subnet = options[:subnets].first
+        instances = [{}]
+        if @static
+          subnet = @subnets.first
           instances = [{ subnet: subnet, ip_address: subnet.ip_addresses.first }]
-        else
-          instances = [{}]
         end
 
-        @is_public = options[:public]
         @service = add! Service.create_in(
-          vpc, name,
+          @vpc, @name,
           {
-            public: @is_public,
+            eip: @public,
+            public: @public,
             ports: [22, 443, { number: 1194, type: 'udp' }],
-            tags: options[:tags],
-            units: units + options[:units],
+            tags:@tags,
+            units: units + @units,
             files: files,
             keypairs: keypairs,
-            subnets: options[:subnets],
+            subnets: @subnets,
             instances: instances,
             iam_policy_statements: [
               {
@@ -118,12 +110,10 @@ module Terrafying
                 ]
               }
             ]
-          }.merge(options[:service])
+          }.merge(@service_options)
         )
 
-        @ip_address = @service.instance_set.instances[0].ip_address
-
-        self
+        @ip_address = @service.instance_set.instances.first.ip_address
       end
 
       def allow_security_group_in(vpc, name: '')
@@ -138,7 +128,7 @@ module Terrafying
           }
         ]
 
-        if @is_public
+        if @public
           ingress_rules << {
             from_port: 0,
             to_port: 0,
@@ -166,85 +156,36 @@ module Terrafying
         )
       end
 
-      def openvpn_authz_service(route_all_traffic, route_dns_entry)
+      def openvpn_authz_service(ca, fqdn, route_all_traffic, route_dns_entry, groups, client_id, issuer_url)
         optional_arguments = []
+        optional_volumes = []
 
         optional_arguments << '--route-all' if route_all_traffic
-
-        if route_dns_entry.count > 0
-          optional_arguments += route_dns_entry.map { |entry| "--route-dns-entries #{entry}" }
-        end
+        optional_arguments += groups.map { |group| "--oidc-allowed-groups \"#{group}\"" }
+        optional_arguments += route_dns_entry.map { |entry| "--route-dns-entries #{entry}" }
+        optional_arguments << "--tls-cert-file /etc/ssl/#{ca.name}/#{fqdn}/cert" if ca
+        optional_arguments << "--tls-key-file /etc/ssl/#{ca.name}/#{fqdn}/key" if ca
+        optional_volumes << "/etc/ssl/#{ca.name}:/etc/ssl/#{ca.name}" if ca
 
         Ignition.container_unit(
-          'openvpn-authz', 'quay.io/uswitch/openvpn-authz:1.2',
-          host_networking: true,
-          volumes: [
+          'openvpn-authz', 'quay.io/uswitch/openvpn-authz:2.1',
+          volumes: optional_volumes + [
             '/etc/ssl/openvpn:/etc/ssl/openvpn',
             '/var/openvpn-authz:/var/openvpn-authz'
           ],
           environment_variables: [
             "AWS_REGION=#{aws.region}"
           ],
+          ports: ['443'],
           arguments: optional_arguments + [
-            "--fqdn #{@fqdn}",
+            "--http-address https://0.0.0.0:443",
+            "--fqdn #{fqdn}",
             '--cache /var/openvpn-authz',
-            '--user-header "X-Forwarded-Email"',
+            "--oidc-client-id \"#{client_id}\"",
+            "--oidc-issuer-url \"#{issuer_url}\"",
             '/etc/ssl/openvpn'
           ]
         )
-      end
-
-      def oauth2_proxy_service(oauth2_provider)
-        Ignition.container_unit(
-          'authnz', 'quay.io/uswitch/authnz-http-proxy:0.1',
-          host_networking: true,
-          arguments: [
-            '--addr=0.0.0.0:4180',
-            '--backend-url=http://localhost:8080',
-            "--oauth-client-id='#{oauth2_provider[:client_id]}'",
-            "--oauth-client-secret='#{oauth2_provider[:client_secret]}'",
-            "--cookie-hash-key='#{oauth2_provider[:cookie_hash_key]}'",
-            "--cookie-block-key='#{oauth2_provider[:cookie_block_key]}'"
-          ],
-          volumes: [
-            '/usr/share/ca-certificates:/etc/ssl/certs:ro'
-          ]
-        )
-      end
-
-      def caddy_service(ca)
-        optional_volumes = []
-
-        optional_volumes << "/etc/ssl/#{ca.name}:/etc/ssl/#{ca.name}:ro" if ca
-
-        Ignition.container_unit(
-          'caddy', 'abiosoft/caddy:0.10.10',
-          host_networking: true,
-          volumes: [
-            '/etc/ssl/certs:/etc/ssl/cert:ro',
-            '/etc/caddy/Caddyfile:/etc/Caddyfile',
-            '/etc/caddy/certs:/etc/caddy/certs'
-          ] + optional_volumes,
-          environment_variables: [
-            'CADDYPATH=/etc/caddy/certs'
-          ]
-        )
-      end
-
-      def caddy_conf(ca, has_provider)
-        port = has_provider ? '4180' : '8080'
-        tls = ca ? "/etc/ssl/#{ca.name}/#{@fqdn}/cert /etc/ssl/#{ca.name}/#{@fqdn}/key" : 'cloud@uswitch.com'
-        {
-          path: '/etc/caddy/Caddyfile',
-          mode: '0644',
-          contents: <<~CADDYFILE
-            #{@fqdn}:443
-            tls #{tls}
-            proxy / localhost:#{port} {
-              transparent
-            }
-          CADDYFILE
-        }
       end
 
       def openvpn_conf

@@ -1,11 +1,9 @@
+# frozen_string_literal: true
 
 module Terrafying
-
   module Components
-
     module CA
-
-      def create_keypair(name, options={})
+      def create_keypair(name, options = {})
         create_keypair_in(self, name, options)
       end
 
@@ -18,63 +16,75 @@ module Terrafying
       end
 
       def object_name(name, type)
-        "#{object_ident(name)}-#{type.to_s}"
+        "#{object_ident(name)}-#{type}"
       end
 
-      def object_key(name, type, version='')
-        if (ca? name)
-          File.join('', @prefix, @name, "ca.#{type.to_s}")
+      def object_key(name, type, version = '')
+        if ca? name
+          File.join('', @prefix, @name, "ca.#{type}")
         else
           File.join('', @prefix, @name, name, type.to_s)
         end
       end
 
-      def object_arn(name, type, version="*")
+      def object_arn(name, type, version = '*')
         key = object_key(name, type, version)
 
         "arn:aws:s3:::#{@bucket}#{key}"
       end
 
-      def object_url(name, type)
-        name = object_name(name, type)
-        key = output_of(:aws_s3_bucket_object, name, :key).to_s
+      def object_url(name, type, version: '')
+        key = object_key(name, type, version)
 
-        File.join("s3://", "#{@bucket}#{key}")
+        File.join('s3://', "#{@bucket}#{key}")
       end
 
-      def reference_keypair(ctx, name)
+      def find_keypair(name)
+        reference_keypair(
+          nil, name,
+          key_version: aws.s3_object(@bucket, object_key(name, :key, 'latest')[1..-1]),
+          cert_version: aws.s3_object(@bucket, object_key(name, :cert, 'latest')[1..-1]),
+        )
+      end
+
+      def reference_keypair(ctx, name, key_version:, cert_version:)
+        resources = []
+
+        if ctx != nil
+          resources += [
+            "aws_s3_bucket_object.#{object_name(name, :key)}",
+            "aws_s3_bucket_object.#{object_name(name, :cert)}"
+          ]
+          if ctx == self
+            resources << "aws_s3_bucket_object.#{object_name(@name, :cert)}"
+          end
+        end
+
         ref = {
           name: name,
           ca: self,
           path: {
-            cert: File.join("/etc/ssl", @name, name, "cert"),
-            key: File.join("/etc/ssl", @name, name, "key"),
+            cert: File.join('/etc/ssl', @name, name, 'cert'),
+            key: File.join('/etc/ssl', @name, name, 'key')
           },
           source: {
-            cert: object_url(name, :cert),
-            key: object_url(name, :key),
+            cert: object_url(name, :cert, version: cert_version),
+            key: object_url(name, :key, version: key_version)
           },
-          resources: [
-            "aws_s3_bucket_object.#{object_name(name, :key)}",
-            "aws_s3_bucket_object.#{object_name(name, :cert)}"
-          ],
+          resources: resources,
           iam_statement: {
-            Effect: "Allow",
+            Effect: 'Allow',
             Action: [
-              "s3:GetObjectAcl",
-              "s3:GetObject",
+              's3:GetObjectAcl',
+              's3:GetObject'
             ],
             Resource: [
               object_arn(@name, :cert),
               object_arn(name, :cert),
-              object_arn(name, :key),
+              object_arn(name, :key)
             ]
           }
         }
-
-        if self == ctx
-          ref[:resources] << "aws_s3_bucket_object.#{object_name(@name, :cert)}"
-        end
 
         ref
       end
@@ -82,9 +92,6 @@ module Terrafying
       def <=>(other)
         @name <=> other.name
       end
-
     end
-
   end
-
 end

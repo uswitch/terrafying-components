@@ -11,10 +11,8 @@ end
 
 def a_file_matching(file, content)
   a_hash_including(
-    {
-      path: "/etc/fluentd/conf.d/#{file}",
-      contents: a_string_matching(content)
-    }
+    path: "/etc/fluentd/conf.d/#{file}",
+    contents: a_string_matching(content)
   )
 end
 
@@ -119,11 +117,9 @@ RSpec.describe Terrafying::Components::Auditd, '#fluentd_conf' do
 
       expect(conf[:iam_policy_statements]).to include(
         a_hash_including(
-          {
-            Effect: 'Allow',
-            Action: ['sts:AssumeRole'],
-            Resource: ['a-role']
-          }
+          Effect: 'Allow',
+          Action: ['sts:AssumeRole'],
+          Resource: ['a-role']
         )
       )
     end
@@ -133,11 +129,9 @@ RSpec.describe Terrafying::Components::Auditd, '#fluentd_conf' do
 
       expect(conf[:iam_policy_statements]).to include(
         a_hash_including(
-          {
-            Effect: 'Allow',
-            Action:  a_collection_including('ec2:DescribeInstances'),
-            Resource: ['*']
-          }
+          Effect: 'Allow',
+          Action: a_collection_including('ec2:DescribeInstances'),
+          Resource: ['*']
         )
       )
     end
@@ -147,11 +141,9 @@ RSpec.describe Terrafying::Components::Auditd, '#fluentd_conf' do
 
       expect(conf[:iam_policy_statements]).to include(
         a_hash_including(
-          {
-            Effect: 'Allow',
-            Action:  a_collection_including('ec2:DescribeTags'),
-            Resource: ['*']
-          }
+          Effect: 'Allow',
+          Action: a_collection_including('ec2:DescribeTags'),
+          Resource: ['*']
         )
       )
     end
@@ -161,11 +153,9 @@ RSpec.describe Terrafying::Components::Auditd, '#fluentd_conf' do
 
       expect(conf[:iam_policy_statements]).to include(
         a_hash_including(
-          {
-            Effect: 'Allow',
-            Action:  a_collection_including('ec2:DescribeRouteTables'),
-            Resource: ['*']
-          }
+          Effect: 'Allow',
+          Action: a_collection_including('ec2:DescribeRouteTables'),
+          Resource: ['*']
         )
       )
     end
