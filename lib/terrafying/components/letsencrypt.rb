@@ -214,14 +214,11 @@ module Terrafying
         @bucket = bucket
         @prefix = options[:prefix]
 
-        resource :aws_lambda_function, "#{@name}-lambda", {
+        resource :aws_lambda_function, "#{@name}_lambda", {
+          function_name: "#{@name}_lambda",
           s3_bucket: "uswitch-certbot-lambda",
           s3_key: "certbot-lambda.zip",
           handler: "main.handler",
-          # The filebase64sha256() function is available in Terraform 0.11.12 and later
-          # For Terraform 0.11.11 and earlier, use the base64sha256() function and the file() function:
-          # source_code_hash = "${base64sha256(file("lambda_function_payload.zip"))}"
-          source_code_hash: "${filebase64sha256(\"certbot-lambda.zip\")}",
           runtime: "python3.7",
           role: "${aws_iam_role.#{@name}_lambda_execution.arn}",
           environment:{
