@@ -16,6 +16,9 @@ module Terrafying
       def self.find(name, bucket, options = {})
         LetsEncrypt.new.find name, bucket, options
       end
+      def self.renew(name, bucket, options = {})
+      LetsEncrypt.new.renew name, bucket, options
+      end
 
       def initialize
         super
@@ -25,10 +28,12 @@ module Terrafying
       def setup_providers
         {
           staging: {
+            url: 'https://acme-staging-v02.api.letsencrypt.org/directory',
             ref: provider(:acme, alias: :staging, server_url: 'https://acme-staging-v02.api.letsencrypt.org/directory'),
             ca_cert: 'https://letsencrypt.org/certs/fakeleintermediatex1.pem'
           },
           live: {
+            url: 'https://acme-v02.api.letsencrypt.org/directory',
             ref: provider(:acme, alias: :live, server_url: 'https://acme-v02.api.letsencrypt.org/directory'),
             ca_cert: 'https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt'
           }
@@ -54,8 +59,8 @@ module Terrafying
         provider :tls, {}
 
         resource :tls_private_key, "#{@name}-account",
-                 algorithm: 'ECDSA',
-                 ecdsa_curve: options[:curve]
+                  algorithm: "ECDSA",
+                  ecdsa_curve: options[:curve]
 
         resource :acme_registration, "#{@name}-reg",
                  provider: @acme_provider[:ref],
@@ -68,6 +73,16 @@ module Terrafying
                  bucket: @bucket,
                  key: File.join('', @prefix, @name, 'account.key'),
                  content: @account_key
+
+        resource :aws_s3_bucket_object, "#{@name}-config", {
+          bucket: @bucket,
+          key: File.join('', @prefix, @name, "config.json"),
+          content: {
+            id: output_of(:acme_registration, "#{@name}-reg", "id"),
+            url: @acme_provider[:url],
+            email_address: options[:email_address],
+          }.to_json,
+        }
 
         @ca_cert_acl = options[:public_certificate] ? 'public-read' : 'private'
 
@@ -126,17 +141,10 @@ module Terrafying
       def create_keypair_in(ctx, name, options = {})
         options = {
           common_name: name,
-          organization: 'uSwitch Limited',
-          validity_in_hours: 24 * 365,
-          allowed_uses: %w[
-            nonRepudiation
-            digitalSignature
-            keyEncipherment
-          ],
+          organization: "uSwitch Limited",
           dns_names: [],
           ip_addresses: [],
-          min_days_remaining: 21,
-          curve: 'P384'
+          curve: "P384",
         }.merge(options)
 
         key_ident = "#{@name}-#{tf_safe(name)}"
@@ -161,7 +169,7 @@ module Terrafying
         ctx.resource :acme_certificate, key_ident, {
                      provider: @acme_provider[:ref],
                      account_key_pem: @account_key,
-                     min_days_remaining: options[:min_days_remaining],
+                     min_days_remaining: 21,
                      dns_challenge: {
                        provider: 'route53'
                      },
@@ -169,27 +177,88 @@ module Terrafying
                    }.merge(cert_options)
 
         key_version = "${sha256(tls_private_key.#{key_ident}.private_key_pem)}"
+
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-key",
                      bucket: @bucket,
                      key: object_key(name, :key, key_version),
                      content: output_of(:tls_private_key, key_ident, :private_key_pem)
+
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-key-latest",
                      bucket: @bucket,
                      key: object_key(name, :key, 'latest'),
                      content: key_version
 
-        cert_version = "${sha256(acme_certificate.#{key_ident}.certificate_pem)}"
-        ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert",
-                     bucket: @bucket,
-                     key: object_key(name, :cert, cert_version),
-                     content: output_of(:acme_certificate, key_ident, :certificate_pem).to_s + @ca_cert
-        ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert-latest",
-                     bucket: @bucket,
-                     key: object_key(name, :cert, 'latest'),
-                     content: cert_version
+       cert_version = "${sha256(acme_certificate.#{key_ident}.certificate_pem)}"
 
-        reference_keypair(ctx, name, key_version: key_version, cert_version: cert_version)
+       ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert",
+                    bucket: @bucket,
+                    key: object_key(name, :cert, cert_version),
+                    content: output_of(:acme_certificate, key_ident, :certificate_pem).to_s + @ca_cert,
+                    lifecycle: { ignore_changes: [ "content" ] } # the lambda will be updating it
+
+       ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert-latest",
+                    bucket: @bucket,
+                    key: object_key(name, :cert, 'latest'),
+                    content: cert_version
+
+       reference_keypair(ctx, name, key_version: key_version, cert_version: cert_version)
       end
+
+      def renew(name, bucket, options={})
+        options = {
+          prefix: "",
+          provider: :staging,
+        }.merge(options)
+
+        @name = name
+        @bucket = bucket
+        @prefix = options[:prefix]
+
+        resource :aws_lambda_function, "#{@name}_lambda", {
+          function_name: "#{@name}_lambda",
+          s3_bucket: "uswitch-certbot-lambda",
+          s3_key: "certbot-lambda.zip",
+          handler: "main.handler",
+          runtime: "python3.7",
+          role: "${aws_iam_role.#{@name}_lambda_execution.arn}",
+          environment:{
+            variables: {
+              CA_BUCKET: @bucket,
+              CA_PREFIX: @prefix,
+            }
+          }
+        }
+        # Lambda execution role
+        resource :aws_iam_role, "#{@name}_lambda_execution", {
+          name: "#{@name}_lambda_execution",
+          assume_role_policy: JSON.pretty_generate(
+                {
+                  Version: "2012-10-17",
+                  Statement: [
+                    {
+                      Action: "sts:AssumeRole",
+                      Principal: {
+                        Service: "lambda.amazonaws.com"
+                        },
+                      Effect: "Allow",
+                      Sid: ""
+                    },
+                    {
+                      Action: [
+                        "s3:Put*",
+                        "s3:Get*",
+                        "s3:DeleteObject"
+                        ],
+                      Resource: ["arn:aws:s3:::#{@bucket}/#{@prefix}"],
+                      Effect: "Allow"
+                    }
+                  ]
+                }
+              )
+            }
+          self
+        end
+
     end
   end
 end
