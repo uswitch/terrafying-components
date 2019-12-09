@@ -228,7 +228,7 @@ module Terrafying
             }
           }
         }
-        # Lambda execution role
+
         resource :aws_iam_role, "#{@name}_lambda_execution", {
           name: "#{@name}_lambda_execution",
           assume_role_policy: JSON.pretty_generate(
@@ -242,20 +242,40 @@ module Terrafying
                         },
                       Effect: "Allow",
                       Sid: ""
-                    },
+                    }
+                  ]
+                }
+              )
+            }
+
+        resource :aws_iam_policy, "#{@name}_lambda_s3", {
+          name: "#{@name}_lambda_s3",
+          description: "A policy for the #{@name}-lambda function to access S3",
+          policy: JSON.pretty_generate(
+                {
+                  Version: "2012-10-17",
+                  Statement: [
                     {
                       Action: [
                         "s3:Put*",
                         "s3:Get*",
                         "s3:DeleteObject"
-                        ],
-                      Resource: ["arn:aws:s3:::#{@bucket}/#{@prefix}"],
+                      ],
+                      Resource: [
+                        "arn:aws:s3:::#{@bucket}/#{@prefix}"
+                      ],
                       Effect: "Allow"
                     }
                   ]
                 }
               )
             }
+
+        resource :aws_iam_role_policy_attachment, "#{@name}_lambda_policy_attachment", {
+            role: "${aws_iam_role.#{@name}_lambda_execution.name}",
+            policy_arn: "${aws_iam_policy.#{@name}_lambda_s3.arn}"
+            }
+
           self
         end
 
