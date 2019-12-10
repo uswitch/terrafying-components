@@ -53,11 +53,16 @@ module Terrafying
           return self
         end
 
+        if options.key? :depends_on
+          depends_on = options[:depends_on]
+        else
+
         provider :tls, {}
 
         resource :tls_private_key, @ident,
                  algorithm: @algorithm,
-                 ecdsa_curve: options[:curve]
+                 ecdsa_curve: options[:curve],
+                 depends_on: depends_on
 
         resource :tls_self_signed_cert, @ident,
                  key_algorithm: @algorithm,
@@ -71,7 +76,8 @@ module Terrafying
                  allowed_uses: %w[
                    certSigning
                    digitalSignature
-                 ]
+                 ],
+                 depends_on: depends_on
 
         @ca_key = output_of(:tls_private_key, @ident, :private_key_pem)
         @ca_cert = output_of(:tls_self_signed_cert, @ident, :cert_pem)
