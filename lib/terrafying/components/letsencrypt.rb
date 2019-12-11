@@ -262,7 +262,7 @@ module Terrafying
                         "s3:DeleteObject"
                       ],
                       Resource: [
-                        "arn:aws:s3:::#{@bucket}/#{@prefix}"
+                        "arn:aws:s3:::#{@bucket}/#{@prefix}/*"
                       ],
                       Effect: "Allow"
                     }
