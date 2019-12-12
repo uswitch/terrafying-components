@@ -259,11 +259,19 @@ module Terrafying
                       Action: [
                         "s3:Put*",
                         "s3:Get*",
-                        "s3:DeleteObject",
-                        "s3:ListBucket"
+                        "s3:DeleteObject"
                       ],
                       Resource: [
                         "arn:aws:s3:::#{@bucket}/#{@prefix}/*"
+                      ],
+                      Effect: "Allow"
+                    },
+                    {
+                      Action: [
+                        "s3:ListBucket"
+                      ],
+                      Resource: [
+                        "arn:aws:s3:::#{@bucket}"
                       ],
                       Effect: "Allow"
                     }
