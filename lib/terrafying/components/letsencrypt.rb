@@ -220,6 +220,7 @@ module Terrafying
           s3_key: "certbot-lambda.zip",
           handler: "main.handler",
           runtime: "python3.7",
+          timeout: "300",
           role: "${aws_iam_role.#{@name}_lambda_execution.arn}",
           environment:{
             variables: {
