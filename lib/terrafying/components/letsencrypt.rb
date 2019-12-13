@@ -16,8 +16,8 @@ module Terrafying
       def self.find(name, bucket, options = {})
         LetsEncrypt.new.find name, bucket, options
       end
-      def self.renew(name, bucket, options = {})
-      LetsEncrypt.new.renew name, bucket, options
+      def self.renew(name, bucket, domains, options = {})
+        LetsEncrypt.new.renew name, bucket, domains, options
       end
 
       def initialize
@@ -176,6 +176,18 @@ module Terrafying
                      certificate_request_pem: output_of(:tls_cert_request, key_ident, :cert_request_pem)
                    }.merge(cert_options)
 
+        csr_version = "${sha256(tls_cert_request.#{key_ident}.cert_request_pem)}"
+
+        ctx.resource :aws_s3_bucket_object, "#{key_ident}-csr",
+                     bucket: @bucket,
+                     key: object_key(name, :csr, csr_version),
+                     content: output_of(:tls_cert_request, key_ident, :cert_request_pem)
+
+        ctx.resource :aws_s3_bucket_object, "#{key_ident}-csr-latest",
+                     bucket: @bucket,
+                     key: object_key(name, :csr, 'latest'),
+                     content: csr_version
+
         key_version = "${sha256(tls_private_key.#{key_ident}.private_key_pem)}"
 
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-key",
@@ -188,23 +200,23 @@ module Terrafying
                      key: object_key(name, :key, 'latest'),
                      content: key_version
 
-       cert_version = "${sha256(acme_certificate.#{key_ident}.certificate_pem)}"
+        cert_version = "${sha256(acme_certificate.#{key_ident}.certificate_pem)}"
 
-       ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert",
-                    bucket: @bucket,
-                    key: object_key(name, :cert, cert_version),
-                    content: output_of(:acme_certificate, key_ident, :certificate_pem).to_s + @ca_cert,
-                    lifecycle: { ignore_changes: [ "content" ] } # the lambda will be updating it
+        ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert",
+                     bucket: @bucket,
+                     key: object_key(name, :cert, cert_version),
+                     content: output_of(:acme_certificate, key_ident, :certificate_pem).to_s + @ca_cert,
+                     lifecycle: { ignore_changes: [ "content" ] } # the lambda will be updating it
 
-       ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert-latest",
-                    bucket: @bucket,
-                    key: object_key(name, :cert, 'latest'),
-                    content: cert_version
+        ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert-latest",
+                     bucket: @bucket,
+                     key: object_key(name, :cert, 'latest'),
+                     content: cert_version
 
-       reference_keypair(ctx, name, key_version: key_version, cert_version: cert_version)
+        reference_keypair(ctx, name, key_version: key_version, cert_version: cert_version)
       end
 
-      def renew(name, bucket, options={})
+      def renew(name, bucket, domains, options={})
         options = {
           prefix: "",
           provider: :staging,
@@ -212,6 +224,7 @@ module Terrafying
 
         @name = name
         @bucket = bucket
+        @domains = domains
         @prefix = options[:prefix]
 
         resource :aws_lambda_function, "#{@name}_lambda", {
@@ -273,6 +286,20 @@ module Terrafying
                       ],
                       Resource: [
                         "arn:aws:s3:::#{@bucket}"
+                      ],
+                      Effect: "Allow"
+                    },
+                    {
+                      Action: [
+                        "route53:ListHostedZones",
+                        "route53:GetChange",
+                        "route53:ChangeResourceRecordSets",
+                      ],
+                      Resource: [
+                        domains.map { | domain |
+                          "arn:aws:route53:::hostedzone/#{domain.zone.id}"
+                         },
+                        "arn:aws:route53:::change/*",
                       ],
                       Effect: "Allow"
                     }
