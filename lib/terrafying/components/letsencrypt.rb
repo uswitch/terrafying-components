@@ -206,7 +206,7 @@ module Terrafying
                      bucket: @bucket,
                      key: object_key(name, :cert, cert_version),
                      content: output_of(:acme_certificate, key_ident, :certificate_pem).to_s + @ca_cert,
-                     lifecycle: { ignore_changes: [ "content" ] } # the lambda will be updating ite
+                     lifecycle: { ignore_changes: [ "content" ] } # the lambda will be updating it
 
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert-latest",
                      bucket: @bucket,
