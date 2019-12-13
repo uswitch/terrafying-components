@@ -297,7 +297,7 @@ module Terrafying
                       ],
                       Resource: [
                         domains.map { | domain |
-                          "arn:aws:route53:::hostedzone/#{domain.zone.id}"
+                          "arn:aws:route53:::#{domain.zone.id[1..-1]}"
                          },
                         "arn:aws:route53:::change/*",
                       ],
