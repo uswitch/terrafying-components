@@ -47,6 +47,7 @@ module Terrafying
           email_address: 'cloud@uswitch.com',
           public_certificate: false,
           curve: 'P384',
+          rsa_bits: '3072',
           use_external_dns: false
         }.merge(options)
 
@@ -59,8 +60,8 @@ module Terrafying
         provider :tls, {}
 
         resource :tls_private_key, "#{@name}-account",
-                  algorithm: "ECDSA",
-                  ecdsa_curve: options[:curve]
+                  algorithm: "RSA",
+                  rsa_bits: options[:rsa_bits]
 
         resource :acme_registration, "#{@name}-reg",
                  provider: @acme_provider[:ref],
