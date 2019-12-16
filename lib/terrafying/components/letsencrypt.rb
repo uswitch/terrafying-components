@@ -295,12 +295,10 @@ module Terrafying
                         "route53:GetChange",
                         "route53:ChangeResourceRecordSets",
                       ],
-                      Resource: [
+                      Resource:
                         domains.map { | domain |
                           "arn:aws:route53:::#{domain.zone.id[1..-1]}"
-                         },
-                        "arn:aws:route53:::change/*",
-                      ],
+                        },
                       Effect: "Allow"
                     }
                   ]
