@@ -234,7 +234,7 @@ module Terrafying
           s3_key: "certbot-lambda.zip",
           handler: "main.handler",
           runtime: "python3.7",
-          timeout: "300",
+          timeout: "900",
           role: "${aws_iam_role.#{@name}_lambda_execution.arn}",
           environment:{
             variables: {
@@ -263,8 +263,8 @@ module Terrafying
               )
             }
 
-        resource :aws_iam_policy, "#{@name}_lambda_s3", {
-          name: "#{@name}_lambda_s3",
+        resource :aws_iam_policy, "#{@name}_lambda_execution_policy", {
+          name: "#{@name}_lambda_execution_policy",
           description: "A policy for the #{@name}-lambda function to access S3",
           policy: JSON.pretty_generate(
                 {
@@ -304,7 +304,23 @@ module Terrafying
                     {
                       Action: [
                         "route53:ListHostedZones",
+                      ],
+                      Resource: [
+                        "*"
+                      ],
+                      Effect: "Allow"
+                    },
+                    {
+                      Action: [
                         "route53:GetChange",
+                      ],
+                      Resource: [
+                        "arn:aws:route53:::change/*"
+                      ],
+                      Effect: "Allow"
+                    },
+                    {
+                      Action: [
                         "route53:ChangeResourceRecordSets",
                       ],
                       Resource:
@@ -320,7 +336,7 @@ module Terrafying
 
         resource :aws_iam_role_policy_attachment, "#{@name}_lambda_policy_attachment", {
             role: "${aws_iam_role.#{@name}_lambda_execution.name}",
-            policy_arn: "${aws_iam_policy.#{@name}_lambda_s3.arn}"
+            policy_arn: "${aws_iam_policy.#{@name}_lambda_execution_policy.arn}"
             }
 
           self
