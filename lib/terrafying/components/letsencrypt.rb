@@ -292,6 +292,17 @@ module Terrafying
                     },
                     {
                       Action: [
+                        "logs:CreateLogGroup",
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents"
+                      ],
+                      Resource: [
+                        "arn:aws:logs:*:*:*"
+                      ],
+                      Effect: "Allow"
+                    },
+                    {
+                      Action: [
                         "route53:ListHostedZones",
                         "route53:GetChange",
                         "route53:ChangeResourceRecordSets",
@@ -310,6 +321,11 @@ module Terrafying
         resource :aws_iam_role_policy_attachment, "#{@name}_lambda_policy_attachment", {
             role: "${aws_iam_role.#{@name}_lambda_execution.name}",
             policy_arn: "${aws_iam_policy.#{@name}_lambda_s3.arn}"
+            }
+
+        resource :aws_cloudwatch_log_group, "#{@name}", {
+            name: "/aws/lambda/#{@name}_lambda",
+            retention_in_days: 14
             }
 
           self
