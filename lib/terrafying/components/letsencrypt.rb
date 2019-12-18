@@ -292,6 +292,17 @@ module Terrafying
                     },
                     {
                       Action: [
+                        "logs:CreateLogGroup",
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents"
+                      ],
+                      Resource: [
+                        "arn:aws:logs:*:*:*"
+                      ],
+                      Effect: "Allow"
+                    },
+                    {
+                      Action: [
                         "route53:ListHostedZones",
                         "route53:GetChange",
                         "route53:ChangeResourceRecordSets",
