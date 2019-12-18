@@ -323,11 +323,6 @@ module Terrafying
             policy_arn: "${aws_iam_policy.#{@name}_lambda_s3.arn}"
             }
 
-        resource :aws_cloudwatch_log_group, "#{@name}", {
-            name: "/aws/lambda/#{@name}_lambda",
-            retention_in_days: 14
-            }
-
           self
         end
 
