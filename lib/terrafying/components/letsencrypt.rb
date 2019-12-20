@@ -16,13 +16,11 @@ module Terrafying
       def self.find(name, bucket, options = {})
         LetsEncrypt.new.find name, bucket, options
       end
-      def self.renew(name, bucket, domains, options = {})
-        LetsEncrypt.new.renew name, bucket, domains, options
-      end
 
       def initialize
         super
         @acme_providers = setup_providers
+        @zones = []
       end
 
       def setup_providers
@@ -48,7 +46,8 @@ module Terrafying
           public_certificate: false,
           curve: 'P384',
           rsa_bits: '3072',
-          use_external_dns: false
+          use_external_dns: false,
+          renewing: false
         }.merge(options)
 
         @name = name
@@ -56,6 +55,9 @@ module Terrafying
         @prefix = options[:prefix]
         @acme_provider = @acme_providers[options[:provider]]
         @use_external_dns = options[:use_external_dns]
+        @renewing = options[:renewing]
+
+        renew() if @renewing
 
         provider :tls, {}
 
@@ -146,7 +148,15 @@ module Terrafying
           dns_names: [],
           ip_addresses: [],
           curve: "P384",
+          zone: ""
         }.merge(options)
+
+        @zones << options[:zone]
+        # we don't want to create LE certs if not renewing (excluding legacy), so raise an exception if that's the case
+        # temporarily ignore calls from rspec tests
+        if @zones.length > 0 and @renewing == false and not caller_locations.to_s.match? /envoy.rb|rspec/
+          raise "Can't create Let's Encrypt domains without setting up the renewal!"
+        end
 
         key_ident = "#{@name}-#{tf_safe(name)}"
 
@@ -203,11 +213,14 @@ module Terrafying
 
         cert_version = "${sha256(acme_certificate.#{key_ident}.certificate_pem)}"
 
-        ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert",
+        cert_config = {
                      bucket: @bucket,
                      key: object_key(name, :cert, cert_version),
                      content: output_of(:acme_certificate, key_ident, :certificate_pem).to_s + @ca_cert,
-                     lifecycle: { ignore_changes: [ "content" ] } # the lambda will be updating it
+        }
+        cert_config[:lifecycle] = { ignore_changes: [ "content" ] } if @renewing
+
+        ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert", cert_config
 
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert-latest",
                      bucket: @bucket,
@@ -217,55 +230,12 @@ module Terrafying
         reference_keypair(ctx, name, key_version: key_version, cert_version: cert_version)
       end
 
-      def renew(name, bucket, domains, options={})
-        options = {
-          prefix: "",
-          provider: :staging,
-        }.merge(options)
-
-        @name = name
-        @bucket = bucket
-        @domains = domains
-        @prefix = options[:prefix]
-
-        resource :aws_lambda_function, "#{@name}_lambda", {
-          function_name: "#{@name}_lambda",
-          s3_bucket: "uswitch-certbot-lambda",
-          s3_key: "certbot-lambda.zip",
-          handler: "main.handler",
-          runtime: "python3.7",
-          timeout: "900",
-          role: "${aws_iam_role.#{@name}_lambda_execution.arn}",
-          environment:{
-            variables: {
-              CA_BUCKET: @bucket,
-              CA_PREFIX: @prefix,
-            }
-          }
-        }
-
-        resource :aws_iam_role, "#{@name}_lambda_execution", {
-          name: "#{@name}_lambda_execution",
-          assume_role_policy: JSON.pretty_generate(
-                {
-                  Version: "2012-10-17",
-                  Statement: [
-                    {
-                      Action: "sts:AssumeRole",
-                      Principal: {
-                        Service: "lambda.amazonaws.com"
-                        },
-                      Effect: "Allow",
-                      Sid: ""
-                    }
-                  ]
-                }
-              )
-            }
-
-        resource :aws_iam_policy, "#{@name}_lambda_execution_policy", {
-          name: "#{@name}_lambda_execution_policy",
-          description: "A policy for the #{@name}-lambda function to access S3",
+      def output_with_children
+        iam_policy = {}
+        if @renewing
+          iam_policy = resource :aws_iam_policy, "#{@bucket}_lambda_execution_policy", {
+          name: "#{@bucket}_lambda_execution_policy",
+          description: "A policy for the #{@bucket}_lambda function to access S3",
           policy: JSON.pretty_generate(
                 {
                   Version: "2012-10-17",
@@ -277,7 +247,7 @@ module Terrafying
                         "s3:DeleteObject"
                       ],
                       Resource: [
-                        "arn:aws:s3:::#{@bucket}/#{@prefix}/*"
+                        "arn:aws:s3:::#{@bucket}/#{@name}/*"
                       ],
                       Effect: "Allow"
                     },
@@ -324,8 +294,8 @@ module Terrafying
                         "route53:ChangeResourceRecordSets",
                       ],
                       Resource:
-                        domains.map { | domain |
-                          "arn:aws:route53:::#{domain.zone.id[1..-1]}"
+                        @zones.map { | zone |
+                          "arn:aws:route53:::#{zone.id[1..-1]}"
                         },
                       Effect: "Allow"
                     }
@@ -333,10 +303,49 @@ module Terrafying
                 }
               )
             }
+          end
+        super
+      end
 
-        resource :aws_iam_role_policy_attachment, "#{@name}_lambda_policy_attachment", {
-            role: "${aws_iam_role.#{@name}_lambda_execution.name}",
-            policy_arn: "${aws_iam_policy.#{@name}_lambda_execution_policy.arn}"
+      def renew
+        resource :aws_lambda_function, "#{@bucket}_lambda", {
+          function_name: "#{@bucket}_lambda",
+          s3_bucket: "uswitch-certbot-lambda",
+          s3_key: "certbot-lambda.zip",
+          handler: "main.handler",
+          runtime: "python3.7",
+          timeout: "900",
+          role: "${aws_iam_role.#{@bucket}_lambda_execution.arn}",
+          environment:{
+            variables: {
+              CA_BUCKET: @bucket,
+              CA_PREFIX: @name,
+            }
+          }
+        }
+
+        resource :aws_iam_role, "#{@bucket}_lambda_execution", {
+          name: "#{@bucket}_lambda_execution",
+          assume_role_policy: JSON.pretty_generate(
+                {
+                  Version: "2012-10-17",
+                  Statement: [
+                    {
+                      Action: "sts:AssumeRole",
+                      Principal: {
+                        Service: "lambda.amazonaws.com"
+                        },
+                      Effect: "Allow",
+                      Sid: ""
+                    }
+                  ]
+                }
+              )
+            }
+
+        resource :aws_iam_role_policy_attachment, "#{@bucket}_lambda_policy_attachment", {
+            role: "${aws_iam_role.#{@bucket}_lambda_execution.name}",
+            policy_arn: "${aws_iam_policy.#{@bucket}_lambda_execution_policy.arn}"
             }
 
           self

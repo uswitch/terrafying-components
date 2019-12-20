@@ -19,7 +19,7 @@ end
 RSpec.describe Terrafying::Components::LetsEncrypt, '#create' do
   context 'providers' do
     it 'creates the provider for staging' do
-      ca = Terrafying::Components::LetsEncrypt.create('test-ca', 'test-bucket')
+      ca = Terrafying::Components::LetsEncrypt.create('test-ca', 'test-bucket', renewing: true)
 
       prov = provider_matching(ca, :acme, :staging)
 
@@ -36,6 +36,7 @@ RSpec.describe Terrafying::Components::LetsEncrypt, '#create' do
         'test-ca',
         'test-bucket',
         prefix: 'test-prefix',
+        renewing: true,
         provider: :staging
       )
 
@@ -45,7 +46,7 @@ RSpec.describe Terrafying::Components::LetsEncrypt, '#create' do
     end
 
     it 'creates the provider for live' do
-      ca = Terrafying::Components::LetsEncrypt.create('test-ca', 'test-bucket')
+      ca = Terrafying::Components::LetsEncrypt.create('test-ca', 'test-bucket', renewing: true)
 
       prov = provider_matching(ca, :acme, :live)
 
@@ -62,6 +63,7 @@ RSpec.describe Terrafying::Components::LetsEncrypt, '#create' do
         'test-ca',
         'test-bucket',
         prefix: 'test-prefix',
+        renewing: true,
         provider: :live
       )
 
@@ -79,6 +81,7 @@ RSpec.describe Terrafying::Components::LetsEncrypt, '#create_keypair' do
         'test-ca',
         'test-bucket',
         prefix: 'test-prefix',
+        renewing: true,
         provider: :staging
       )
 
@@ -95,6 +98,7 @@ RSpec.describe Terrafying::Components::LetsEncrypt, '#create_keypair' do
         'test-bucket',
         prefix: 'test-prefix',
         provider: :staging,
+        renewing: true,
         use_external_dns: true
       )
 
@@ -110,6 +114,7 @@ RSpec.describe Terrafying::Components::LetsEncrypt, '#create_keypair' do
         'test-ca',
         'test-bucket',
         prefix: 'test-prefix',
+        renewing: true,
         provider: :staging,
       )
 
