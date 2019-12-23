@@ -124,5 +124,20 @@ RSpec.describe Terrafying::Components::LetsEncrypt, '#create_keypair' do
 
       expect(cert.key? :recursive_nameservers).to eq(false)
     end
+
+    it 'creates the certbot lambda' do
+      ca = Terrafying::Components::LetsEncrypt.create(
+        'test-ca',
+        'test-bucket',
+        prefix: 'test-prefix',
+        renewing: true
+      )
+
+      ca.create_keypair('test-cert', dns_names: ['test.example.com'])
+
+      certbot = ca.output_with_children['resource']['aws_lambda_function'].values.first
+
+      expect(certbot[:function_name]).to eq('test-bucket_lambda')
+    end
   end
 end

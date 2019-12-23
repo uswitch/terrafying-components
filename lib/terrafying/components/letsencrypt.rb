@@ -153,8 +153,7 @@ module Terrafying
 
         @zones << options[:zone]
         # we don't want to create LE certs if not renewing (excluding legacy), so raise an exception if that's the case
-        # temporarily ignore calls from rspec tests
-        if @zones.length > 0 and @renewing == false and not caller_locations.to_s.match? /envoy.rb|rspec/
+        if @zones.length > 0 and @renewing == false and not caller_locations.to_s.match? /envoy.rb/
           raise "Can't create Let's Encrypt domains without setting up the renewal!"
         end
 
@@ -295,7 +294,7 @@ module Terrafying
                       ],
                       Resource:
                         @zones.map { | zone |
-                          "arn:aws:route53:::#{zone.id[1..-1]}"
+                          "arn:aws:route53:::#{zone.id[1..-1]}" if zone != ""
                         },
                       Effect: "Allow"
                     }
