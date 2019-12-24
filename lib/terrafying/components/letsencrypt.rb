@@ -226,13 +226,13 @@ module Terrafying
       end
 
       def output_with_children
-        @prefix_path = File.join(@name, @prefix)
+        @prefix_path = [@prefix, @name].reject(&:empty?).join("/")
 
         iam_policy = {}
         if @renewing
           iam_policy = resource :aws_iam_policy, "#{@name}_lambda_execution_policy", {
           name: "#{@name}_lambda_execution_policy",
-          description: "A policy for the #{@name}_lambda function to access S3",
+          description: "A policy for the #{@name}_lambda function to access S3 and R53",
           policy: JSON.pretty_generate(
                 {
                   Version: "2012-10-17",
@@ -291,8 +291,8 @@ module Terrafying
                         "route53:ChangeResourceRecordSets",
                       ],
                       Resource:
-                        @zones.reject { | z | z.empty? }.map { | zone |
-                          "arn:aws:route53:::#{zone.id[1..-1]}."
+                        @zones.reject(&:nil?).map { | zone |
+                          "arn:aws:route53:::#{zone.id[1..-1]}"
                         },
                       Effect: "Allow"
                     }
