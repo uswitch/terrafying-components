@@ -227,6 +227,7 @@ module Terrafying
 
       def output_with_children
         @prefix_path = [@prefix, @name].reject(&:empty?).join("/")
+        @zones.select! { | zone | zone&.to_s.size.to_i > 0 }
 
         iam_policy = {}
         if @renewing
@@ -291,7 +292,7 @@ module Terrafying
                         "route53:ChangeResourceRecordSets",
                       ],
                       Resource:
-                        @zones.reject(&:nil?).map { | zone |
+                        @zones.map { | zone |
                           "arn:aws:route53:::#{zone.id[1..-1]}"
                         },
                       Effect: "Allow"
