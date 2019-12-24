@@ -152,10 +152,6 @@ module Terrafying
         }.merge(options)
 
         @zones << options[:zone]
-        # we don't want to create LE certs if not renewing (excluding legacy), so raise an exception if that's the case
-        if @zones.length > 0 and @renewing == false and not caller_locations.to_s.match? /envoy.rb/
-          raise "Can't create Let's Encrypt domains without setting up the renewal!"
-        end
 
         key_ident = "#{@name}-#{tf_safe(name)}"
 

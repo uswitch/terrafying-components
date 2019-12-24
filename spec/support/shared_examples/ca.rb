@@ -16,7 +16,7 @@ shared_examples 'a CA' do
   end
 
   before do
-    @ca = described_class.create(ca_name, bucket_name, renewing: true)
+    @ca = described_class.create(ca_name, bucket_name)
   end
 
   describe '.create' do
@@ -143,7 +143,7 @@ shared_examples 'a CA' do
     end
 
     it 'should have keys/certs that start with "/" when it has no prefix' do
-      ca = described_class.create(ca_name, bucket_name, renewing: true)
+      ca = described_class.create(ca_name, bucket_name)
       ca.create_keypair('bar')
 
       s3_objects = ca.output['resource']['aws_s3_bucket_object'].values
@@ -152,7 +152,7 @@ shared_examples 'a CA' do
     end
 
     it 'should have keys/certs that start with "/" when it has a prefix' do
-      ca = described_class.create(ca_name, bucket_name, renewing: true, prefix: 'a_prefix')
+      ca = described_class.create(ca_name, bucket_name, prefix: 'a_prefix')
       ca.create_keypair('bar')
 
       s3_objects = ca.output['resource']['aws_s3_bucket_object'].values
