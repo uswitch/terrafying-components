@@ -132,7 +132,7 @@ RSpec.describe Terrafying::Components::LetsEncrypt, '#create_keypair' do
 
       certbot = ca.output_with_children['resource']['aws_lambda_function'].values.first
 
-      expect(certbot[:function_name]).to eq('test-bucket_lambda')
+      expect(certbot[:function_name]).to eq('test-ca_lambda')
     end
   end
 end

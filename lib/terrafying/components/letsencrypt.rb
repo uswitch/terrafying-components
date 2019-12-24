@@ -226,11 +226,13 @@ module Terrafying
       end
 
       def output_with_children
+        @prefix_path = File.join(@name, @prefix)
+
         iam_policy = {}
         if @renewing
-          iam_policy = resource :aws_iam_policy, "#{@bucket}_lambda_execution_policy", {
-          name: "#{@bucket}_lambda_execution_policy",
-          description: "A policy for the #{@bucket}_lambda function to access S3",
+          iam_policy = resource :aws_iam_policy, "#{@name}_lambda_execution_policy", {
+          name: "#{@name}_lambda_execution_policy",
+          description: "A policy for the #{@name}_lambda function to access S3",
           policy: JSON.pretty_generate(
                 {
                   Version: "2012-10-17",
@@ -242,7 +244,7 @@ module Terrafying
                         "s3:DeleteObject"
                       ],
                       Resource: [
-                        "arn:aws:s3:::#{@bucket}/#{@name}/*"
+                        "arn:aws:s3:::#{@bucket}/#{@prefix_path}/*"
                       ],
                       Effect: "Allow"
                     },
@@ -289,8 +291,8 @@ module Terrafying
                         "route53:ChangeResourceRecordSets",
                       ],
                       Resource:
-                        @zones.map { | zone |
-                          "arn:aws:route53:::#{zone.id[1..-1]}" if zone != ""
+                        @zones.reject { | z | z.empty? }.map { | zone |
+                          "arn:aws:route53:::#{zone.id[1..-1]}."
                         },
                       Effect: "Allow"
                     }
@@ -303,24 +305,24 @@ module Terrafying
       end
 
       def renew
-        resource :aws_lambda_function, "#{@bucket}_lambda", {
-          function_name: "#{@bucket}_lambda",
+        resource :aws_lambda_function, "#{@name}_lambda", {
+          function_name: "#{@name}_lambda",
           s3_bucket: "uswitch-certbot-lambda",
           s3_key: "certbot-lambda.zip",
           handler: "main.handler",
           runtime: "python3.7",
           timeout: "900",
-          role: "${aws_iam_role.#{@bucket}_lambda_execution.arn}",
+          role: "${aws_iam_role.#{@name}_lambda_execution.arn}",
           environment:{
             variables: {
               CA_BUCKET: @bucket,
-              CA_PREFIX: @name,
+              CA_PREFIX: @prefix_path
             }
           }
         }
 
-        resource :aws_iam_role, "#{@bucket}_lambda_execution", {
-          name: "#{@bucket}_lambda_execution",
+        resource :aws_iam_role, "#{@name}_lambda_execution", {
+          name: "#{@name}_lambda_execution",
           assume_role_policy: JSON.pretty_generate(
                 {
                   Version: "2012-10-17",
@@ -338,9 +340,9 @@ module Terrafying
               )
             }
 
-        resource :aws_iam_role_policy_attachment, "#{@bucket}_lambda_policy_attachment", {
-            role: "${aws_iam_role.#{@bucket}_lambda_execution.name}",
-            policy_arn: "${aws_iam_policy.#{@bucket}_lambda_execution_policy.arn}"
+        resource :aws_iam_role_policy_attachment, "#{@name}_lambda_policy_attachment", {
+            role: "${aws_iam_role.#{@name}_lambda_execution.name}",
+            policy_arn: "${aws_iam_policy.#{@name}_lambda_execution_policy.arn}"
             }
 
           self
