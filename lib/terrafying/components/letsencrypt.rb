@@ -291,7 +291,7 @@ module Terrafying
                         "route53:ChangeResourceRecordSets",
                       ],
                       Resource:
-                        @zones.reject{ | z | z.nil? || z.to_s.empty? }.map { | zone |
+                        @zones.reject(&:nil?).map { | zone |
                           "arn:aws:route53:::#{zone.id[1..-1]}"
                         },
                       Effect: "Allow"
