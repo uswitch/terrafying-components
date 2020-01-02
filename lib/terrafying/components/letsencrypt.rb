@@ -147,11 +147,10 @@ module Terrafying
           organization: "uSwitch Limited",
           dns_names: [],
           ip_addresses: [],
-          curve: "P384",
-          zone: ""
+          curve: "P384"
         }.merge(options)
 
-        @zones << options[:zone]
+        @zones << options[:zone] if options[:zone]
 
         key_ident = "#{@name}-#{tf_safe(name)}"
 
