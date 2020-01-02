@@ -291,7 +291,7 @@ module Terrafying
                         "route53:ChangeResourceRecordSets",
                       ],
                       Resource:
-                        @zones.reject(&:nil?).map { | zone |
+                        @zones.compact.map { | zone |
                           "arn:aws:route53:::#{zone.id[1..-1]}"
                         },
                       Effect: "Allow"
@@ -305,23 +305,7 @@ module Terrafying
       end
 
       def renew
-        resource :aws_lambda_function, "#{@name}_lambda", {
-          function_name: "#{@name}_lambda",
-          s3_bucket: "uswitch-certbot-lambda",
-          s3_key: "certbot-lambda.zip",
-          handler: "main.handler",
-          runtime: "python3.7",
-          timeout: "900",
-          role: "${aws_iam_role.#{@name}_lambda_execution.arn}",
-          environment:{
-            variables: {
-              CA_BUCKET: @bucket,
-              CA_PREFIX: @prefix_path
-            }
-          }
-        }
-
-        resource :aws_iam_role, "#{@name}_lambda_execution", {
+        execution_role = resource :aws_iam_role, "#{@name}_lambda_execution", {
           name: "#{@name}_lambda_execution",
           assume_role_policy: JSON.pretty_generate(
                 {
@@ -340,13 +324,29 @@ module Terrafying
               )
             }
 
+        resource :aws_lambda_function, "#{@name}_lambda", {
+          function_name: "#{@name}_lambda",
+          s3_bucket: "uswitch-certbot-lambda",
+          s3_key: "certbot-lambda.zip",
+          handler: "main.handler",
+          runtime: "python3.7",
+          timeout: "900",
+          role: execution_role["arn"],
+          environment:{
+            variables: {
+              CA_BUCKET: @bucket,
+              CA_PREFIX: @prefix_path
+            }
+          }
+        }
+
         resource :aws_iam_role_policy_attachment, "#{@name}_lambda_policy_attachment", {
-            role: "${aws_iam_role.#{@name}_lambda_execution.name}",
+            role: execution_role["name"],
             policy_arn: "${aws_iam_policy.#{@name}_lambda_execution_policy.arn}"
             }
 
-          self
-        end
+        self
+      end
 
     end
   end
