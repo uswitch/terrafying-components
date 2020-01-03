@@ -56,6 +56,7 @@ module Terrafying
         @acme_provider = @acme_providers[options[:provider]]
         @use_external_dns = options[:use_external_dns]
         @renewing = options[:renewing]
+        @prefix_path = [@prefix, @name].reject(&:empty?).join("/")
 
         renew() if @renewing
 
@@ -225,8 +226,6 @@ module Terrafying
       end
 
       def output_with_children
-        @prefix_path = [@prefix, @name].reject(&:empty?).join("/")
-
         iam_policy = {}
         if @renewing
           iam_policy = resource :aws_iam_policy, "#{@name}_lambda_execution_policy", {
