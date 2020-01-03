@@ -322,7 +322,7 @@ module Terrafying
               )
             }
 
-        resource :aws_lambda_function, "#{@name}_lambda", {
+        lamda_function = resource :aws_lambda_function, "#{@name}_lambda", {
           function_name: "#{@name}_lambda",
           s3_bucket: "uswitch-certbot-lambda",
           s3_key: "certbot-lambda.zip",
@@ -339,10 +339,30 @@ module Terrafying
         }
 
         resource :aws_iam_role_policy_attachment, "#{@name}_lambda_policy_attachment", {
-            role: execution_role["name"],
-            policy_arn: "${aws_iam_policy.#{@name}_lambda_execution_policy.arn}"
-            }
+          role: execution_role["name"],
+          policy_arn: "${aws_iam_policy.#{@name}_lambda_execution_policy.arn}"
+        }
 
+        rand_hour = rand(0..23).to_s
+        event_rule = resource :aws_cloudwatch_event_rule, "once_per_day", {
+          name: "once-per-day",
+          description: "Fires once per day",
+          schedule_expression: "cron(0 #{rand_hour} * * ? *)"
+        }
+
+        resource :aws_cloudwatch_event_target, "#{@name}_lambda_#{event_rule["name"]}", {
+          rule: event_rule["name"],
+          target_id: lamda_function["name"],
+          arn: lamda_function["arn"],
+        }
+
+        resource :aws_lambda_permission, "allow_cloudwatch_to_invoke_#{@name}_lambda", {
+          statement_id: "AllowExecutionFromCloudWatch",
+          action: "lambda:InvokeFunction",
+          function_name: lamda_function["name"],
+          principal: "events.amazonaws.com",
+          source_arn: event_rule["arn"]
+        }
         self
       end
 
