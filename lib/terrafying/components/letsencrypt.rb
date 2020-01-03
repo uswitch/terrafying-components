@@ -350,16 +350,16 @@ module Terrafying
           schedule_expression: "cron(0 #{rand_hour} * * ? *)"
         }
 
-        resource :aws_cloudwatch_event_target, "#{@name}_lambda_#{event_rule["name"]}", {
+        resource :aws_cloudwatch_event_target, "#{@name}_lambda_event_target", {
           rule: event_rule["name"],
-          target_id: lamda_function["name"],
-          arn: lamda_function["arn"],
+          target_id: lamda_function["id"],
+          arn: lamda_function["arn"]
         }
 
         resource :aws_lambda_permission, "allow_cloudwatch_to_invoke_#{@name}_lambda", {
           statement_id: "AllowExecutionFromCloudWatch",
           action: "lambda:InvokeFunction",
-          function_name: lamda_function["name"],
+          function_name: lamda_function["function_name"],
           principal: "events.amazonaws.com",
           source_arn: event_rule["arn"]
         }
