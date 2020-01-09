@@ -66,6 +66,7 @@ module Terrafying
                    common_name: options[:common_name],
                    organization: options[:organization]
                  },
+                 early_renewal_hours: 24 * 30,
                  is_ca_certificate: true,
                  validity_period_hours: 24 * 365,
                  allowed_uses: %w[
