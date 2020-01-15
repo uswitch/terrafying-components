@@ -57,7 +57,8 @@ module Terrafying
         @ca = ca
         @groups = groups
         @cidr = cidr
-        @fqdn = vpc.zone.qualify(name)
+        @zone = vpc.zone
+        @fqdn = @zone.qualify(name)
         @public = public
         @subnets = subnets
         @static = static
@@ -79,7 +80,7 @@ module Terrafying
           openvpn_ip_delay,
         ]
         keypairs = []
-        keypairs.push(@ca.create_keypair_in(self, @fqdn)) if @ca
+        keypairs.push(@ca.create_keypair_in(self, @fqdn, zone: @zone)) if @ca
 
         instances = [{}]
         if @static
