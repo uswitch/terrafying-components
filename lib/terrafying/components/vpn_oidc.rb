@@ -73,6 +73,9 @@ module Terrafying
         units = [
           openvpn_service,
           openvpn_authz_service(@ca, @fqdn, @route_all_traffic, @route_dns_entries, @groups, @client_id, @issuer_url),
+          cert_checking_timer,
+          cert_checking_service,
+          cert_checking_path,
         ]
         files = [
           openvpn_conf,
@@ -144,6 +147,63 @@ module Terrafying
                  ingress: ingress_rules
       end
 
+      def cert_checking_conf
+        {
+          path: '/opt/cert_checking.yml',
+          mode: '0644',
+          contents: <<~EOF
+            casource: #{@ca.name}
+            caname: #{@ca.source}
+            fqdn: #{@fqdn}
+          EOF
+        }
+      end
+
+      def cert_checking_timer
+        {
+
+          name: 'cert_checking.timer',
+          content: <<~CERT_CHECKING_TIMER
+           [Unit]
+           Description=Certificate Checking Service Timer
+           [Timer]
+           OnCalendar=*-*-* 00:00:00
+           Unit=cert_checking.service
+           [Install]
+           WantedBy=multi-user.target
+          CERT_CHECKING_TIMER
+        }
+      end
+
+      def cert_checking_service
+        Ignition.container_unit(
+          'cert-checking', 'quay.io/uswitch/cert-downloader:0.1',
+          volumes: [
+            "/etc/ssl/#{@ca.name}:/etc/ssl/#{@ca.name}",
+            "/opt/cert_checking.yml:/cert_checking.yml"
+          ]
+          environment_variables: [
+            "AWS_REGION=#{aws.region}"
+          ],
+       
+        )
+
+      def cert_checking_path
+        {
+
+          name: 'cert_checking.path',
+          content: <<~CERT_CHECKING_PATH
+            [Unit]
+            Description=Monitor the file for changes
+            [Path]
+            PathChanged=/etc/ssl/#{@ca.name}
+            Unit=openvpn-authz.service
+            [Install]
+            WantedBy=multi-user.target
+          CERT_CHECKING_PATH
+        }
+      end
+    
       def openvpn_service
         Ignition.container_unit(
           'openvpn', 'kylemanna/openvpn',
