@@ -74,11 +74,18 @@ module Terrafying
           openvpn_service,
           openvpn_authz_service(@ca, @fqdn, @route_all_traffic, @route_dns_entries, @groups, @client_id, @issuer_url),
         ]
+          
         files = [
           openvpn_conf,
           openvpn_env,
           openvpn_ip_delay,
         ]
+
+        if @ca
+          units += [cert_checking_service, cert_checking_path, cert_checking_timer,restart_openvpn_authz_service]
+          files << cert_checking_conf
+        end
+        
         keypairs = []
         keypairs.push(@ca.create_keypair_in(self, @fqdn, zone: @zone)) if @ca
 
@@ -144,6 +151,86 @@ module Terrafying
                  ingress: ingress_rules
       end
 
+      def cert_checking_conf
+        {
+          path: '/opt/cert_checking.yml',
+          mode: '0644',
+          contents: <<~CERT_CHECKING_CONF
+            casource: #{@ca.name}
+            caname: #{@ca.source}
+            fqdn: #{@fqdn}
+          CERT_CHECKING_CONF
+        }
+      end
+
+      def cert_checking_timer
+        {
+
+          name: 'cert_checking.timer',
+          contents: <<~CERT_CHECKING_TIMER
+            [Unit]
+            Description=Certificate Checking Service Timer
+            [Timer]
+            OnCalendar=*-*-* 00:00:00
+            Unit=cert_checking.service
+            [Install]
+            WantedBy=multi-user.target
+          CERT_CHECKING_TIMER
+        }
+      end
+      
+      def cert_checking_service
+        {
+        name: 'cert-checking.service',
+        enabled: false,
+        contents: <<~CERT_CHECKING_SERVICE
+            [Install]
+            WantedBy=multi-user.target
+            [Unit]
+            Description=cert-checking      
+            [Service]
+            Type=oneshot
+            ExecStartPre=-/usr/bin/docker rm -f cert-checking
+            ExecStart=/usr/bin/docker run --name cert-checking  \
+            -e AWS_REGION=#{aws.region} \
+            -v /etc/ssl/#{@ca.name}:/etc/ssl/#{@ca.name} \
+            -v /opt/cert_checking.yml:/cert_checking.yml quay.io/uswitch/cert-downloader:v0.1
+        CERT_CHECKING_SERVICE
+        }
+      end
+
+      def cert_checking_path
+        {
+
+          name: 'cert_checking.path',
+          contents: <<~CERT_CHECKING_PATH
+            [Unit]
+            Description=Monitor the file for changes
+            [Path]
+            PathChanged=/etc/ssl/#{@ca.name}
+            Unit=restart-openvpn-authz.service
+            [Install]
+            WantedBy=multi-user.target
+          CERT_CHECKING_PATH
+        }
+      end
+
+      def restart_openvpn_authz_service
+        {
+          name: 'restart-openvpn-authz.service',
+          enabled: false,
+          contents: <<~RESTART_OPENVPN_AUTHZ
+              [Install]
+              WantedBy=multi-user.target
+              [Unit]
+              Description=restart openvpn-authz service
+              [Service]
+              Type=oneshot
+              ExecStart=/usr/bin/systemctl restart openvpn-authz.service
+          RESTART_OPENVPN_AUTHZ
+          }
+      end
+    
       def openvpn_service
         Ignition.container_unit(
           'openvpn', 'kylemanna/openvpn',
