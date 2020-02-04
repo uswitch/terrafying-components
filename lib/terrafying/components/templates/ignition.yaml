@@ -9,7 +9,10 @@ passwd:
       sshAuthorizedKeys:
         - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDlIRM5H4lz/t8PfiGptR8cWqVrD8NCwROZly1XuYooWiIdTinJAvkATdR54ic6YuNenoKOeqtTj0dkytbzi5xItBti6cqzHvFAOXhKzVCsR5n/Mdt2KPbp215pFS96yfsx/24Z4cGygXe24SEXv28KdWZ1nWQyUrlne9jMaB7n3cGzNaXOPy42l03/bAaflWoyD7gyyS9XHDuZkLxVrhtlO43UtIXL4IZzKTCy1cZdaabZxRsrSzHUp+/5p3fHYgcYmwyO0Y+W3TP6LRC2ebeQe0r4Rh1o83sRvcbmuG14Wk7wDVFtu0vjtwOflCsRHGRibep/rXvtqf1/bG3brQ9tAV3oIeZ4r4yPUZenwIfM2pQH3ElD3kqw+Pdh1la1QXb4FDxeEw29nLU1eQF6ggnp3gzJJDRQWRB/I2RjKje5M1NcKjn+8ZBG1PHBikaOkjMRkXzOb8JQxKcWmeuRHo/ZTh7oUDDMObAVej9K91eCP3Dtz5QqmL1+J4+7YCjoBOBPpX3J+mrkxHRHcJYEIyJF6/mNDtov09Vji7Rdd0j1A5CJ2fvcuuUGK0LUHMSEyzLKg830E8b/kIZrufWEsljqlcHrYCJAO/LYl77PFe6B/vNfZtyw4fI6juGDlZNYWYXLJ2c+poCS8+2o1KjCli1lV2BOAjDUKEJxQ9NAw6MxPQ== tom.booth@uswitch.com"
       groups: ["sudo", "docker"]
-
+    <% users.each do |user| %>
+    - name: "<%= user[:name] %>"
+      sshAuthorizedKeys: <%= Array(user[:sshkeys]) %>
+    <% end %>
 systemd:
   units:
     <% if disable_update_engine %>

@@ -54,6 +54,7 @@ module Terrafying
           units: [],
           files: [],
           tags: {},
+          users: [],
           ssh_group: vpc.ssh_group,
           subnets: vpc.subnets.fetch(:private, []),
           startup_grace_period: 300,
