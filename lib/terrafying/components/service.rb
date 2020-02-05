@@ -60,7 +60,8 @@ module Terrafying
           startup_grace_period: 300,
           depends_on: [],
           audit_role: "arn:aws:iam::#{aws.account_id}:role/auditd_logging",
-          metrics_ports: []
+          metrics_ports: [],
+          vpc_endpoints_egress: []
         }.merge(options)
 
         unless options[:audit_role].nil?

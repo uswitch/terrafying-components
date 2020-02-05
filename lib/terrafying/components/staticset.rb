@@ -49,7 +49,8 @@ module Terrafying
           tags: {},
           ssh_group: vpc.ssh_group,
           depends_on: [],
-          volumes: []
+          volumes: [],
+          vpc_endpoints_egress: []
         }.merge(options)
 
         ident = "#{tf_safe(vpc.name)}-#{name}"
@@ -62,9 +63,13 @@ module Terrafying
                                    description: "Describe the ingress and egress of the static set #{ident}",
                                    tags: options[:tags],
                                    vpc_id: vpc.id
-
-        default_egress_rule(ident, @security_group)
-
+        
+        vpc_endpoints_egress = options[:vpc_endpoints_egress]
+        if vpc_endpoints_egress.empty?
+          default_egress_rule(ident, @security_group)
+        else
+          vpc_endpoint_egress_rules(ident, @security_group, vpc, vpc_endpoints_egress)
+        end
         path_mtu_setup!
 
         @instances = options[:instances].map.with_index do |config, i|
@@ -112,6 +117,25 @@ module Terrafying
                  to_port: 0,
                  protocol: -1,
                  cidr_blocks: ['0.0.0.0/0']
+      end
+
+
+      def vpc_endpoint_egress_rules(ident, security_group, vpc, vpc_endpoints)
+        prefix_ids = vpc_endpoints.map do | e |
+          vpc_endpoint = data :aws_vpc_endpoint, "#{ident}-#{tf_safe(e)}", {
+            vpc_id: vpc.id,
+            service_name: e,
+          }
+          vpc_endpoint[:prefix_list_id]
+        end
+
+        resource :aws_security_group_rule, "#{ident}-vpc-endpoint-egress",
+                 security_group_id: security_group,
+                 type: 'egress',
+                 from_port: 0,
+                 to_port: 0,
+                 protocol: -1,
+                 prefix_list_ids: prefix_ids
       end
 
       def volume_for(name, instance, volume, tags)
