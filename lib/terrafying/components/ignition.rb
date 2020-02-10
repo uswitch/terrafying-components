@@ -71,6 +71,7 @@ module Terrafying
           volumes: [],
           files: [],
           units: [],
+          users: [],
           networkd_units: [],
           ssh_group: 'cloud',
           disable_update_engine: false,

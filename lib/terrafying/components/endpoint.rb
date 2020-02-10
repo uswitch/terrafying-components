@@ -25,6 +25,7 @@ module Terrafying
           auto_accept: true,
           subnets: vpc.subnets.fetch(:private, []),
           private_dns: false,
+          vpc_endpoint_type: "Interface",
           tags: {}
         }.merge(options)
 
@@ -73,7 +74,7 @@ module Terrafying
         resource :aws_vpc_endpoint, ident,
                  vpc_id: vpc.id,
                  service_name: service_name,
-                 vpc_endpoint_type: 'Interface',
+                 vpc_endpoint_type: options[:vpc_endpoint_type],
                  security_group_ids: [@security_group],
                  auto_accept: options[:auto_accept],
                  subnet_ids: options[:subnets].map(&:id),

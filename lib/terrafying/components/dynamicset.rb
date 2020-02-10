@@ -43,7 +43,8 @@ module Terrafying
           ssh_group: vpc.ssh_group,
           subnets: vpc.subnets.fetch(:private, []),
           depends_on: [],
-          rolling_update: :simple
+          rolling_update: :simple,
+          vpc_endpoints_egress: []
         }.merge(options)
 
         ident = "#{tf_safe(vpc.name)}-#{name}"
@@ -57,7 +58,12 @@ module Terrafying
                                    tags: options[:tags],
                                    vpc_id: vpc.id
 
-        default_egress_rule(ident, @security_group)
+        vpc_endpoints_egress = options[:vpc_endpoints_egress]
+        if vpc_endpoints_egress.empty?
+          default_egress_rule(ident, @security_group)
+        else
+          vpc_endpoint_egress_rules(ident, @security_group, vpc, vpc_endpoints_egress)
+        end
 
         path_mtu_setup!
 
@@ -115,6 +121,24 @@ module Terrafying
         self
       end
 
+      def vpc_endpoint_egress_rules(ident, security_group, vpc, vpc_endpoints)
+        prefix_ids = vpc_endpoints.map do | e |
+          vpc_endpoint = data :aws_vpc_endpoint, "#{ident}-#{tf_safe(e)}", {
+            vpc_id: vpc.id,
+            service_name: e,
+          }
+          vpc_endpoint[:prefix_list_id]
+        end
+
+        resource :aws_security_group_rule, "#{ident}-vpc-endpoint-egress",
+                 security_group_id: security_group,
+                 type: 'egress',
+                 from_port: 0,
+                 to_port: 0,
+                 protocol: -1,
+                 prefix_list_ids: prefix_ids
+      end
+      
       def default_egress_rule(ident, security_group)
         resource :aws_security_group_rule, "#{ident}-default-egress",
                  security_group_id: security_group,
