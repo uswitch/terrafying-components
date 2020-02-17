@@ -12,7 +12,7 @@ module Terrafying
         def create_in(vpc, name, ports:)
             @name = name
             @ports = ports
-            @security_group_ref = resource :aws_security_group, ("#{vpc.id}-#{name}"),{
+            @security_group_ref = resource :aws_security_group, tf_safe("#{vpc.id}-#{name}"),{
                 vpc_id: vpc.id,
                 name: name,
                 tags: {
