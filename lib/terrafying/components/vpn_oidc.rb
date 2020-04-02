@@ -74,7 +74,7 @@ module Terrafying
           openvpn_service,
           openvpn_authz_service(@ca, @fqdn, @route_all_traffic, @route_dns_entries, @groups, @client_id, @issuer_url),
         ]
-          
+
         files = [
           openvpn_conf,
           openvpn_env,
@@ -85,7 +85,7 @@ module Terrafying
           units += [cert_checking_service, cert_checking_path, cert_checking_timer,restart_openvpn_authz_service]
           files << cert_checking_conf
         end
-        
+
         keypairs = []
         keypairs.push(@ca.create_keypair_in(self, @fqdn, zone: @zone)) if @ca
 
@@ -178,20 +178,20 @@ module Terrafying
           CERT_CHECKING_TIMER
         }
       end
-      
+
       def cert_checking_service
         {
-        name: 'cert-checking.service',
+        name: 'cert_checking.service',
         enabled: false,
         contents: <<~CERT_CHECKING_SERVICE
             [Install]
             WantedBy=multi-user.target
             [Unit]
-            Description=cert-checking      
+            Description=cert_checking
             [Service]
             Type=oneshot
-            ExecStartPre=-/usr/bin/docker rm -f cert-checking
-            ExecStart=/usr/bin/docker run --name cert-checking  \
+            ExecStartPre=-/usr/bin/docker rm -f cert_checking
+            ExecStart=/usr/bin/docker run --name cert_checking  \
             -e AWS_REGION=#{aws.region} \
             -v /etc/ssl/#{@ca.name}:/etc/ssl/#{@ca.name} \
             -v /opt/cert_checking.yml:/cert_checking.yml quay.io/uswitch/cert-downloader:v0.1
@@ -230,7 +230,7 @@ module Terrafying
           RESTART_OPENVPN_AUTHZ
           }
       end
-    
+
       def openvpn_service
         Ignition.container_unit(
           'openvpn', 'kylemanna/openvpn',
