@@ -233,7 +233,7 @@ module Terrafying
 
       def openvpn_service
         Ignition.container_unit(
-          'openvpn', 'kylemanna/openvpn',
+          'openvpn', 'kylemanna/openvpn:2.4',
           host_networking: true,
           privileged: true,
           volumes: [
