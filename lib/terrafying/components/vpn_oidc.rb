@@ -47,7 +47,8 @@ module Terrafying
         route_dns_entries: [],
         units: [],
         tags: {},
-        service_options: {}
+        service_options: {},
+        openvpn_image: 'kylemanna/openvpn:2.4'
       )
         super()
         @vpc = vpc
@@ -67,6 +68,7 @@ module Terrafying
         @units = units
         @tags = tags
         @service_options = service_options
+        @openvpn_image = openvpn_image
       end
 
       def create_in
@@ -233,7 +235,7 @@ module Terrafying
 
       def openvpn_service
         Ignition.container_unit(
-          'openvpn', 'kylemanna/openvpn:2.4',
+          'openvpn', @openvpn_image,
           host_networking: true,
           privileged: true,
           volumes: [
