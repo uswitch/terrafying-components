@@ -158,8 +158,8 @@ module Terrafying
           path: '/opt/cert_checking.yml',
           mode: '0644',
           contents: <<~CERT_CHECKING_CONF
-            casource: #{@ca.name}
-            caname: #{@ca.source}
+            casource: #{@ca.source}
+            caname: #{@ca.name}
             fqdn: #{@fqdn}
           CERT_CHECKING_CONF
         }
@@ -196,7 +196,7 @@ module Terrafying
             ExecStart=/usr/bin/docker run --name cert_checking  \
             -e AWS_REGION=#{aws.region} \
             -v /etc/ssl/#{@ca.name}:/etc/ssl/#{@ca.name} \
-            -v /opt/cert_checking.yml:/cert_checking.yml quay.io/uswitch/cert-downloader:v0.1
+            -v /opt/cert_checking.yml:/cert_checking.yml quay.io/uswitch/cert-downloader:v1.0
         CERT_CHECKING_SERVICE
         }
       end
