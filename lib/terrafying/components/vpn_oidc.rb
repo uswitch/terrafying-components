@@ -158,8 +158,8 @@ module Terrafying
           path: '/opt/cert_checking.yml',
           mode: '0644',
           contents: <<~CERT_CHECKING_CONF
-            casource: #{@ca.name}
-            caname: #{@ca.source}
+            casource: #{@ca.source}
+            caname: #{@ca.name}
             fqdn: #{@fqdn}
           CERT_CHECKING_CONF
         }
