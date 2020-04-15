@@ -209,7 +209,7 @@ module Terrafying
             [Unit]
             Description=Monitor the file for changes
             [Path]
-            PathChanged=/etc/ssl/#{@ca.name}
+            PathChanged=/etc/ssl/#{@ca.name}/#{@fqdn}/cert
             Unit=restart-openvpn-authz.service
             [Install]
             WantedBy=multi-user.target
