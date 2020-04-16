@@ -48,7 +48,7 @@ module Terrafying
         units: [],
         tags: {},
         service_options: {},
-        openvpn_image: 'kylemanna/openvpn:2.4'
+        openvpn_image: 'quay.io/uswitch/openvpn:2.4.8'
       )
         super()
         @vpc = vpc
