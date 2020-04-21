@@ -172,7 +172,7 @@ module Terrafying
         cert_options = {}
         cert_options[:recursive_nameservers] = ['1.1.1.1:53', '8.8.8.8:53', '8.8.4.4:53'] if @use_external_dns
 
-        @renewing ? min_days_remaining = 0 : min_days_remaining = 21
+        @renewing ? min_days_remaining = -1 : min_days_remaining = 21
         # we don't want Terraform to renew certs if the certbot lambda is provisioned
         ctx.resource :acme_certificate, key_ident, {
                      provider: @acme_provider[:ref],
