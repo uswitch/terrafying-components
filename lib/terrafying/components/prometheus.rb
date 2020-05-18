@@ -28,7 +28,8 @@ module Terrafying
         thanos_instance_type: 't3a.small',
         prometheus_tsdb_retention: '1d',
         prometheus_data_dir: '/var/lib/prometheus',
-        prometheus_data_size: 20
+        prometheus_data_size: 20,
+        prometheus_additional_scrape_configs: []
       )
         super()
         @vpc = vpc
@@ -42,6 +43,7 @@ module Terrafying
         @prometheus_tsdb_retention = prometheus_tsdb_retention
         @prometheus_data_dir = prometheus_data_dir
         @prometheus_data_size = prometheus_data_size
+        @prometheus_additional_scrape_configs = prometheus_additional_scrape_configs
       end
 
       def find
@@ -270,6 +272,9 @@ module Terrafying
                 target_label: instance_id
               - source_labels: [__meta_ec2_tag_envoy_cluster]
                 target_label: envoy_cluster
+            <%- end -%>
+            <%- @prometheus_additional_scrape_configs.each do |conf| -%>
+            <%= conf %>
             <%- end -%>
           END
         }
