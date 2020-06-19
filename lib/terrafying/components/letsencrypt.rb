@@ -345,11 +345,12 @@ module Terrafying
           policy_arn: "${aws_iam_policy.#{@name}_lambda_execution_policy.arn}"
         }
 
-        rand_hour = rand(0..23).to_s
+        alpha_num = generate_alpha_num().to_s
+
         event_rule = resource :aws_cloudwatch_event_rule, "once_per_day", {
           name: "once-per-day",
           description: "Fires once per day",
-          schedule_expression: "cron(0 #{rand_hour} * * ? *)"
+          schedule_expression: "cron(0 #{alpha_num} * * ? *)"
         }
 
         resource :aws_cloudwatch_event_target, "#{@name}_lambda_event_target", {
@@ -366,6 +367,13 @@ module Terrafying
           source_arn: event_rule["arn"]
         }
         self
+      end
+
+      def generate_alpha_num
+        @name.split("").each do |ch|
+          alpha_num = ch.upcase.ord - 'A'.ord
+          return alpha_num if (alpha_num < 24)
+        end
       end
 
     end
