@@ -369,11 +369,12 @@ module Terrafying
         self
       end
 
-      def generate_alpha_num
-        @name.split("").each do |ch|
+      def generate_alpha_num()
+        result = @name.split("").each do |ch|
           alpha_num = ch.upcase.ord - 'A'.ord
-          return alpha_num if (alpha_num < 24)
+          return alpha_num.abs if (alpha_num.abs < 24)
         end
+        result.is_a?(Integer) ? result : 6
       end
 
     end
