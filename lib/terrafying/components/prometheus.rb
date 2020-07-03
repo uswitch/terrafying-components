@@ -272,6 +272,8 @@ module Terrafying
                 target_label: instance_id
               - source_labels: [__meta_ec2_tag_envoy_cluster]
                 target_label: envoy_cluster
+              - source_labels: [__meta_ec2_tag_service_name]
+                target_label: service_name
             <%- end -%>
             <%- @prometheus_additional_scrape_configs.each do |conf| -%>
             <%= conf %>
