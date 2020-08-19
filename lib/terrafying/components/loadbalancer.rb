@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'digest'
+require 'digest/bubblebabble'
 require 'terrafying/components/usable'
 require 'terrafying/generator'
 
@@ -217,7 +217,7 @@ module Terrafying
 
       def make_identifier(type, vpc_name, name)
         gen_id = "#{type}-#{tf_safe(vpc_name)}-#{name}"
-        return Digest::SHA2.hexdigest(gen_id)[0..24] if @hex_ident || gen_id.size > 26
+        return Digest::SHA256.bubblebabble(gen_id)[0..15] if @hex_ident || gen_id.size > 26
 
         gen_id[0..31]
       end

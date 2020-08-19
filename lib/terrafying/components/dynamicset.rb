@@ -44,8 +44,11 @@ module Terrafying
           subnets: vpc.subnets.fetch(:private, []),
           depends_on: [],
           rolling_update: :simple,
+          metadata_options: {},
           vpc_endpoints_egress: []
         }.merge(options)
+
+        metadata_options = options[:metadata_options]
 
         ident = "#{tf_safe(vpc.name)}-#{name}"
 
@@ -85,6 +88,7 @@ module Terrafying
                                  lifecycle: {
                                    create_before_destroy: true
                                  },
+                                 metadata_options: options[:metadata_options],
                                  depends_on: resource_name_from(options[:instance_profile])
 
         if options[:instances][:track]

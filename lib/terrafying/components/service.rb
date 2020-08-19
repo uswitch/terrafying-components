@@ -59,6 +59,7 @@ module Terrafying
           subnets: vpc.subnets.fetch(:private, []),
           startup_grace_period: 300,
           depends_on: [],
+          metadata_options: {},
           audit_role: "arn:aws:iam::#{aws.account_id}:role/auditd_logging",
           metrics_ports: [],
           vpc_endpoints_egress: []
@@ -96,6 +97,8 @@ module Terrafying
           @instance_profile = add! InstanceProfile.create(ident, statements: iam_statements)
         end
 
+        metadata_options = options[:metadata_options]
+
         tags = options[:tags].merge(service_name: name)
 
         set = options[:instances].is_a?(Hash) ? DynamicSet : StaticSet
@@ -112,6 +115,7 @@ module Terrafying
         instance_set_options = {
           instance_profile: @instance_profile,
           depends_on: depends_on,
+          metadata_options: metadata_options,
           tags: tags
         }
 
