@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'digest'
+require 'digest/bubblebabble'
 require 'terrafying'
 require 'terrafying/components/instance'
 require 'terrafying/components/loadbalancer'
@@ -91,15 +91,15 @@ RSpec.describe Terrafying::Components::LoadBalancer do
     expect(lb.name.length).to be <= 32
   end
 
-  it 'should use hex identifiers when requested' do
-    name = 'abcdefghijklmnopqrstuvwxyz123456789'
-    expected_hex = Digest::SHA2.hexdigest("application-#{@vpc.name}-#{name}")[0..24]
+  it 'should use bubblebabble identifiers when requested' do
+    name = 'abcde-fghi-jklm'
+    expected_bubblebabble = Digest::SHA256.bubblebabble("application-#{@vpc.name}-#{name}")[0..15]
 
     lb = Terrafying::Components::LoadBalancer.create_in(
       @vpc, name, hex_ident: true
     )
 
-    expect(lb.name).to eq(expected_hex)
+    expect(lb.name).to eq(expected_bubblebabble)
   end
 
   context('application load balancer') do

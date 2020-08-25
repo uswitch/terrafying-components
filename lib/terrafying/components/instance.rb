@@ -36,8 +36,14 @@ module Terrafying
           instance_profile: nil,
           ports: [],
           tags: {},
-          security_groups: [],
-          depends_on: []
+          security_groups: nil,
+          metadata_options: nil,
+          depends_on: nil,
+          ipv6_cidr_blocks: nil,
+          prefix_list_ids: nil,
+          security_groups: nil,
+          self: nil,
+          description: nil,
         }.merge(options)
 
         ident = "#{tf_safe(vpc.name)}-#{name}"
@@ -55,7 +61,12 @@ module Terrafying
                                        from_port: 0,
                                        to_port: 0,
                                        protocol: -1,
-                                       cidr_blocks: ['0.0.0.0/0']
+                                       cidr_blocks: ['0.0.0.0/0'],
+                                       ipv6_cidr_blocks: options[:ipv6_cidr_blocks],
+                                       prefix_list_ids: options[:prefix_list_ids],
+                                       security_groups: options[:security_groups],
+                                       self: options[:self],
+                                       description: options[:description]
                                      }
                                    ]
 
@@ -99,6 +110,7 @@ module Terrafying
             vpc.internal_ssh_security_group
           ].push(*options[:security_groups]),
           user_data: options[:user_data],
+          metadata_options: options[:metadata_options],
           lifecycle: {
             create_before_destroy: true
           },

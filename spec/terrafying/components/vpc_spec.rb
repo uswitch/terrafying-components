@@ -161,7 +161,12 @@ end
       from_port: 22,
       to_port: 22,
       protocol: 'tcp',
-      cidr_blocks: [cidr]
+      cidr_blocks: [cidr],
+      description: nil, 
+      ipv6_cidr_blocks: nil, 
+      prefix_list_ids: nil, 
+      security_groups: nil,
+      self: nil
     }
 
     expect(ssh_security_group[:ingress][0]).to eq(rule)
