@@ -5,6 +5,7 @@ require 'netaddr'
 require 'terrafying/components/subnet'
 require 'terrafying/components/zone'
 require 'terrafying/generator'
+require 'digest/bubblebabble'
 
 module Terrafying
   module Components
@@ -243,7 +244,7 @@ module Terrafying
           subnets: @subnets.values.flatten
         }.merge(options)
 
-        ident = tf_safe(ip_address)
+        ident = tf_safe(Digest::SHA256.bubblebabble(ip_address)[0..11]+ip_address)
 
         if options[:tunnels].count > 2
           raise 'You can only define a max of two tunnels'

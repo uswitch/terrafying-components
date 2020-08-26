@@ -198,7 +198,7 @@ end
         ]
       )
 
-      conn = vpc.output_with_children['resource']['aws_vpn_connection']['1-2-3-4']
+      conn = vpc.output_with_children['resource']['aws_vpn_connection']['xinin-gavaf-1-2-3-4']
 
       expect(conn['tunnel1_inside_cidr']).to eq('1.2.3.4/30')
       expect(conn).to_not have_key('tunnel1_preshared_key')
