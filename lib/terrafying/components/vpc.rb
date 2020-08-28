@@ -294,7 +294,7 @@ module Terrafying
         route_tables.product(cidrs).each do |route_table, cidr|
           hash = Digest::SHA2.hexdigest "#{route_table}-#{tf_safe(cidr)}"
 
-          resource :aws_route, "#{@name}-to-#{ident}-peer-#{hash}",
+          resource :aws_route, "#{@name}-to-#{tf_safe(ip_address)}-peer-#{hash}",
                    route_table_id: route_table,
                    destination_cidr_block: cidr,
                    gateway_id: vpn_gateway
