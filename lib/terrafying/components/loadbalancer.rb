@@ -3,7 +3,7 @@
 require 'digest/bubblebabble'
 require 'terrafying/components/usable'
 require 'terrafying/generator'
-
+require 'digest'
 require_relative './ports'
 
 module Terrafying
@@ -216,9 +216,14 @@ module Terrafying
       end
 
       def make_identifier(type, vpc_name, name)
-        gen_id = "#{type}-#{tf_safe(vpc_name)}-#{name}"
-        return Digest::SHA256.bubblebabble(gen_id)[0..15] if @hex_ident || gen_id.size > 26
 
+        gen_id = "#{type}-#{vpc_name}-#{name}"
+        hex = Digest::SHA2.hexdigest(gen_id)[0..24]
+        if hex[0..0] =~ /[a-z]/
+            return hex if @hex_ident || gen_id.size > 26
+        else return Digest::SHA256.bubblebabble(gen_id)[0..15]
+          end
+    
         gen_id[0..31]
       end
     end
