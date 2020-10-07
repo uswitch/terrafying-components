@@ -41,7 +41,7 @@ module Terrafying
 
       def create_in(vpc, name, options = {})
         options = {
-          ami: aws.ami('base-image-fc-2860fb52', owners = ['136393635417']),
+          ami: aws.ami('base-image-fc-3c48f829', owners = ['136393635417']),
           instance_type: 't3a.micro',
           ports: [],
           instances: [{}],
