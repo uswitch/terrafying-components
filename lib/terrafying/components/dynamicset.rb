@@ -33,7 +33,7 @@ module Terrafying
         options = {
           public: false,
           eip: false,
-          ami: aws.ami('base-image-fc-3c48f829', owners = ['136393635417']),
+          ami: aws.ami('base-image-fc-3c48f829', owners = ['477284023816']),
           instance_type: 't3a.micro',
           instances: { min: 1, max: 1, desired: 1, tags: {} },
           ports: [],
