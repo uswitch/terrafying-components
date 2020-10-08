@@ -44,7 +44,7 @@ module Terrafying
           subnets: vpc.subnets.fetch(:private, []),
           depends_on: [],
           rolling_update: :simple,
-          metadata_options: {},
+          metadata_options: nil,
           vpc_endpoints_egress: []
         }.merge(options)
 
