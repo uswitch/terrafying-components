@@ -33,7 +33,7 @@ pipeline:
       - rake push
     when:
       event: tag
-      branch: master
+      # branch: master
 
   docker-tag:
     image: plugins/docker
@@ -45,4 +45,4 @@ pipeline:
     auto_tag: true
     when:
       event: tag
-      branch: master
+      # branch: master
