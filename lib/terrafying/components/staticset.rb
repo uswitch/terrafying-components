@@ -38,7 +38,7 @@ module Terrafying
         options = {
           public: false,
           eip: false,
-          ami: aws.ami('base-image-fc-3c48f829', owners = ['477284023816']),
+          ami: aws.ami('base-image-fc-2860fb52', owners = ['136393635417']),
           instance_type: 't3a.micro',
           subnets: vpc.subnets.fetch(:private, []),
           ports: [],
@@ -63,7 +63,7 @@ module Terrafying
                                    description: "Describe the ingress and egress of the static set #{ident}",
                                    tags: options[:tags],
                                    vpc_id: vpc.id
-        
+
         vpc_endpoints_egress = options[:vpc_endpoints_egress]
         if vpc_endpoints_egress.empty?
           default_egress_rule(ident, @security_group)
@@ -102,7 +102,7 @@ module Terrafying
                    type: 'ingress',
                    from_port: from_port(port[:upstream_port]),
                    to_port: to_port(port[:upstream_port]),
-                   protocol: port[:type],
+                   protocol: port[:type] == 'udp' ? 'udp' : 'tcp',
                    self: true
         end
 
