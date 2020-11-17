@@ -187,9 +187,9 @@ module Terrafying
                                                     protocol: 'tcp',
                                                     cidr_blocks: [@cidr],
                                                     description: nil, 
-                                                    ipv6_cidr_blocks: nil, 
-                                                    prefix_list_ids: nil, 
-                                                    security_groups: nil,
+                                                    ipv6_cidr_blocks: [],
+                                                    prefix_list_ids: [],
+                                                    security_groups: [],
                                                     self: nil
                                                   }
                                                 ],
@@ -200,9 +200,9 @@ module Terrafying
                                                     protocol: 'tcp',
                                                     cidr_blocks: [@cidr],
                                                     description: nil, 
-                                                    ipv6_cidr_blocks: nil, 
-                                                    prefix_list_ids: nil, 
-                                                    security_groups: nil,
+                                                    ipv6_cidr_blocks: [],
+                                                    prefix_list_ids: [],
+                                                    security_groups: [],
                                                     self: nil
                                                   }
                                                 ]
