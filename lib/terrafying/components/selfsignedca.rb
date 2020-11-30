@@ -22,7 +22,7 @@ module Terrafying
         options = {
           prefix: '',
           common_name: name,
-          organization: 'uSwitch Limited',
+          organization: 'Uswitch Limited',
           public_certificate: false,
           curve: 'P384'
         }.merge(options)
@@ -123,7 +123,7 @@ module Terrafying
       def create_keypair_in(ctx, name, options = {})
         options = {
           common_name: name,
-          organization: 'uSwitch Limited',
+          organization: 'Uswitch Limited',
           validity_in_hours: 24 * 365,
           allowed_uses: %w[
             nonRepudiation

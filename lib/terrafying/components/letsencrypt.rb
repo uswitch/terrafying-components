@@ -145,7 +145,7 @@ module Terrafying
       def create_keypair_in(ctx, name, options = {})
         options = {
           common_name: name,
-          organization: "uSwitch Limited",
+          organization: "Uswitch Limited",
           dns_names: [],
           ip_addresses: [],
           curve: "P384"
