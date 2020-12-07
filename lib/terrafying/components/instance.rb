@@ -110,7 +110,7 @@ module Terrafying
             create_before_destroy: true
           },
           depends_on: options[:depends_on]
-        }.merge(options[:ip_address] ? { private_ip: options[:ip_address] } : {}).merge(lifecycle)
+        }.merge(options[:ip_address] ? { private_ip: options[:ip_address] } : {}).merge(lifecycle).compact
 
         @ip_address = @id[options[:public] ? :public_ip : :private_ip]
 

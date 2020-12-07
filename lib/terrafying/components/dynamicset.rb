@@ -48,8 +48,6 @@ module Terrafying
           vpc_endpoints_egress: []
         }.merge(options)
 
-        metadata_options = options[:metadata_options]
-
         ident = "#{tf_safe(vpc.name)}-#{name}"
 
         @name = ident
@@ -70,7 +68,7 @@ module Terrafying
 
         path_mtu_setup!
 
-        launch_config = resource :aws_launch_configuration, ident,
+        launch_config = resource :aws_launch_configuration, ident, {
                                  name_prefix: "#{ident}-",
                                  image_id: options[:ami],
                                  instance_type: options[:instance_type],
@@ -90,6 +88,7 @@ module Terrafying
                                  },
                                  metadata_options: options[:metadata_options],
                                  depends_on: resource_name_from(options[:instance_profile])
+                                }.compact
 
         if options[:instances][:track]
           instances = instances_by_tags(Name: ident)
