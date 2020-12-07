@@ -57,11 +57,11 @@ module Terrafying
                                        to_port: 0,
                                        protocol: -1,
                                        cidr_blocks: ['0.0.0.0/0'],
-                                       ipv6_cidr_blocks: nil,
-                                       prefix_list_ids: nil,
-                                       security_groups: nil,
+                                       ipv6_cidr_blocks: [],
+                                       prefix_list_ids: [],
+                                       security_groups: [],
                                        self: nil,
-                                       description: nil
+                                       description: ''
                                      }
                                    ]
 

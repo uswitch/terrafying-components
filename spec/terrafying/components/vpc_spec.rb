@@ -162,10 +162,10 @@ end
       to_port: 22,
       protocol: 'tcp',
       cidr_blocks: [cidr],
-      description: nil, 
-      ipv6_cidr_blocks: nil, 
-      prefix_list_ids: nil, 
-      security_groups: nil,
+      description: '',
+      ipv6_cidr_blocks: [],
+      prefix_list_ids: [],
+      security_groups: [],
       self: nil
     }
 
