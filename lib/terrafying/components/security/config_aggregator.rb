@@ -42,7 +42,7 @@ module Terrafying
                      provider: @provider,
                      role: role["name"],
                      policy_arn: "arn:aws:iam::aws:policy/service-role/AWSConfigRoleForOrganizations",
-                   }
+                  }.compact
 
           source = {}
 
