@@ -134,7 +134,12 @@ module Terrafying
             from_port: 0,
             to_port: 0,
             protocol: -1,
-            security_groups: [@service.egress_security_group]
+            security_groups: [@service.egress_security_group],
+            ipv6_cidr_blocks: nil,
+            prefix_list_ids: nil,
+            cidr_blocks: nil,
+            self: nil,
+            description: nil,
           }
         ]
 
@@ -143,7 +148,12 @@ module Terrafying
             from_port: 0,
             to_port: 0,
             protocol: -1,
-            cidr_blocks: ["#{@ip_address}/32"]
+            cidr_blocks: ["#{@ip_address}/32"],
+            ipv6_cidr_blocks: nil,
+            prefix_list_ids: nil,
+            security_groups: nil,
+            self: nil,
+            description: nil
           }
         end
 
