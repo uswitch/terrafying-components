@@ -91,15 +91,19 @@ RSpec.describe Terrafying::Components::LoadBalancer do
     expect(lb.name.length).to be <= 32
   end
 
-  it 'should use hex identifiers when requested' do
-    name = 'abcdefghijklmnopqrstuvwxyz123456789'
-    expected_hex = Digest::SHA2.hexdigest("application-#{@vpc.name}-#{name}")[0..24]
+  it 'should use bubblebabble identifiers when requested but keep hexdigest for name' do
+    name = 'abcde-fghi-jklm'
+    expect_name = Digest::SHA2.hexdigest("application-#{@vpc.name}-#{name}")[0..24]
 
     lb = Terrafying::Components::LoadBalancer.create_in(
       @vpc, name, hex_ident: true
     )
 
-    expect(lb.name).to eq(expected_hex)
+    lb_resource_name = lb.output_with_children['resource']['aws_lb'].keys.first
+    lb_resource = lb.output_with_children['resource']['aws_lb'].values.first
+
+    expect(lb_resource_name).to eq(expect_name.gsub(%r{^(\d)}, '_\1'))
+    expect(lb.name).to eq(expect_name)
   end
 
   context('application load balancer') do
