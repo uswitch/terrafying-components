@@ -16,7 +16,7 @@ module Terrafying
       end
 
       def path_mtu_setup!
-        resource :aws_security_group_rule, "#{@name}-path-mtu",
+        resource :aws_security_group_rule, "#{@name}-path-mtu".gsub(%r{^(\d)}, '_\1'),
                  security_group_id: egress_security_group,
                  type: 'ingress',
                  protocol: 1, # icmp
@@ -42,7 +42,7 @@ module Terrafying
           cidr_ident = cidr.tr('./', '-')
 
           @ports.select(&block).map do |port|
-            resource :aws_security_group_rule, "#{@name}-to-#{cidr_ident}-#{port[:name]}",
+            resource :aws_security_group_rule, "#{@name}-to-#{cidr_ident}-#{port[:name]}".gsub(%r{^(\d)}, '_\1'),
                      security_group_id: ingress_security_group,
                      type: 'ingress',
                      from_port: from_port(port[:upstream_port]),
@@ -92,7 +92,7 @@ module Terrafying
       def used_by(*other_resources, &block)
         other_resources.map do |other_resource|
           @ports.select(&block).map.map do |port|
-            resource :aws_security_group_rule, "#{@name}-to-#{other_resource.name}-#{port[:name]}",
+            resource :aws_security_group_rule, "#{@name}-to-#{other_resource.name}-#{port[:name]}".gsub(%r{^(\d)}, '_\1'),
                      security_group_id: ingress_security_group,
                      type: 'ingress',
                      from_port: from_port(port[:upstream_port]),
@@ -100,7 +100,7 @@ module Terrafying
                      protocol: port[:type] == 'udp' ? 'udp' : 'tcp',
                      source_security_group_id: other_resource.egress_security_group
 
-            resource :aws_security_group_rule, "#{other_resource.name}-to-#{@name}-#{port[:name]}",
+            resource :aws_security_group_rule, "#{other_resource.name}-to-#{@name}-#{port[:name]}".gsub(%r{^(\d)}, '_\1'),
                      security_group_id: other_resource.egress_security_group,
                      type: 'egress',
                      from_port: from_port(port[:downstream_port]),

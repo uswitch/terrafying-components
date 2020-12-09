@@ -159,7 +159,7 @@ module Terrafying
 
       def attach_load_balancer(load_balancer)
         load_balancer.targets.each.with_index do |target, i|
-          resource :aws_autoscaling_attachment, "#{load_balancer.name}-#{@name}-#{i}",
+          resource :aws_autoscaling_attachment, "#{load_balancer.name}-#{@name}-#{i}".gsub(%r{^(\d)}, '_\1'),
                    autoscaling_group_name: @asg,
                    alb_target_group_arn: target.target_group
         end
