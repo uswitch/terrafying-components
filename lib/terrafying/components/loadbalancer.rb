@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
-require 'digest'
 require 'terrafying/components/usable'
 require 'terrafying/generator'
-
+require 'digest'
 require_relative './ports'
 
 module Terrafying
@@ -36,14 +35,15 @@ module Terrafying
         rescue StandardError
           @type = 'application'
           ident = make_identifier(@type, vpc.name, name)
+          name = make_name(@type, vpc.name, name)
 
-          lb = aws.lb_by_name(ident)
+          lb = aws.lb_by_name(name)
 
-          @security_group = aws.security_group_by_tags(loadbalancer_name: ident)
+          @security_group = aws.security_group_by_tags(loadbalancer_name: name)
         end
 
         @id = lb.load_balancer_arn
-        @name = ident
+        @name = name
 
         target_groups = aws.target_groups_by_lb(@id)
 
@@ -93,14 +93,14 @@ module Terrafying
         @type = l4_ports.count == 0 ? 'application' : 'network'
 
         ident = make_identifier(@type, vpc.name, name)
-        @name = ident
+        @name = make_name(@type, vpc.name, name)
 
         if application?
           @security_group = resource :aws_security_group, ident,
-                                     name: "loadbalancer-#{ident}",
-                                     description: "Describe the ingress and egress of the load balancer #{ident}",
+                                     name: "loadbalancer-#{@name}",
+                                     description: "Describe the ingress and egress of the load balancer #{@name}",
                                      tags: @tags.merge(
-                                       loadbalancer_name: ident
+                                       loadbalancer_name: @name
                                      ),
                                      vpc_id: vpc.id
 
@@ -112,7 +112,7 @@ module Terrafying
         end
 
         @id = resource :aws_lb, ident, {
-          name: ident,
+          name: @name,
           load_balancer_type: type,
           internal: !options[:public],
           tags: @tags
@@ -125,8 +125,9 @@ module Terrafying
 
         @ports.each do |port|
           port_ident = "#{ident}-#{port[:downstream_port]}"
+          port_name = "#{@name}-#{port[:downstream_port]}"
 
-          default_action = port.key?(:action) ? port[:action] : forward_to_tg(port, port_ident, vpc)
+          default_action = port.key?(:action) ? port[:action] : forward_to_tg(port, port_ident, port_name, vpc)
 
           ssl_options = alb_certs(port, port_ident)
 
@@ -148,9 +149,9 @@ module Terrafying
         self
       end
 
-      def forward_to_tg(port, port_ident, vpc)
+      def forward_to_tg(port, port_ident, port_name, vpc)
         target_group = resource :aws_lb_target_group, port_ident, {
-          name: port_ident,
+          name: port_name,
           port: port[:downstream_port],
           protocol: port[:type].upcase,
           vpc_id: vpc.id
@@ -215,11 +216,15 @@ module Terrafying
         set.autoscale_on_load_balancer(self, target_value: target_value, disable_scale_in: disable_scale_in)
       end
 
-      def make_identifier(type, vpc_name, name)
+      def make_name(type, vpc_name, name)
         gen_id = "#{type}-#{tf_safe(vpc_name)}-#{name}"
         return Digest::SHA2.hexdigest(gen_id)[0..24] if @hex_ident || gen_id.size > 26
 
         gen_id[0..31]
+      end
+
+      def make_identifier(type, vpc_name, name)
+        make_name(type, vpc_name, name).gsub(%r{^(\d)}, '_\1')
       end
     end
   end
