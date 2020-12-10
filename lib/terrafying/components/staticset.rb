@@ -161,7 +161,7 @@ module Terrafying
 
       def attach_load_balancer(load_balancer)
         @instances.product(load_balancer.targets).each.with_index do |(instance, target), i|
-          resource :aws_lb_target_group_attachment, "#{load_balancer.name}-#{@name}-#{i}",
+          resource :aws_lb_target_group_attachment, "#{load_balancer.name}-#{@name}-#{i}".gsub(%r{^(\d)}, '_\1'),
                    target_group_arn: target.target_group,
                    target_id: instance.id
         end

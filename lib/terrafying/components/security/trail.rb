@@ -120,7 +120,7 @@ module Terrafying
                                                "logs:CreateLogStream"
                                              ],
                                              Resource: [
-                                               @log_group["arn"],
+                                               "#{@log_group["arn"]}:*",
                                              ]
                                            },
                                            {
@@ -130,7 +130,7 @@ module Terrafying
                                                "logs:PutLogEvents"
                                              ],
                                              Resource: [
-                                               @log_group["arn"],
+                                               "#{@log_group["arn"]}:*",
                                              ]
                                            }
                                          ]
@@ -152,7 +152,7 @@ module Terrafying
                      enable_log_file_validation: true,
                      kms_key_id: store.key_arn,
 
-                     cloud_watch_logs_group_arn: @log_group["arn"],
+                     cloud_watch_logs_group_arn: "#{@log_group["arn"]}:*",
                      cloud_watch_logs_role_arn: log_role["arn"],
 
                      event_selector: [
