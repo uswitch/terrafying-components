@@ -151,6 +151,31 @@ RSpec.describe Terrafying::Components::LoadBalancer do
       expect(lb_resource).to not_include(:enable_cross_zone_load_balancing)
     end
 
+    it('should add authentication-oidc default action when passed config') do
+      lb = Terrafying::Components::LoadBalancer.create_in(
+        @vpc, 'test-alb', ports: [{ type: 'https', number: 443, ssl_certificate: ['test-1', 'test-2', 'test-3'], 
+          oidc_config: {
+            authorization_endpoint: "https://example.com/authorization_endpoint",
+            client_id: "client_id",
+            client_secret: "client_secret",
+            issuer: "https://example.com",
+            token_endpoint: "https://example.com/token_endpoint",
+            user_info_endpoint: "https://example.com/user_info_endpoint",
+          }
+        }]
+      )
+
+      listener_actions = lb.output_with_children['resource']['aws_lb_listener'].values.first[:default_action]
+
+      expect(listener_actions.length() == 2)
+
+      expect(listener_actions.first[:type] == "forward")
+
+      expect(listener_actions.last[:type] == "authenticate-oidc")
+      expect(listener_actions.last[:authenticate_oidc][:client_id] ==  "client_id")
+      expect(listener_actions.last[:authenticate_oidc][:client_secret] ==  "client_secret")
+    end
+
     context('ssl certificates') do
       it('should use the first cert passed as a string') do
         lb = Terrafying::Components::LoadBalancer.create_in(
@@ -269,7 +294,7 @@ RSpec.describe Terrafying::Components::LoadBalancer do
 
       expect(listener).to include(
         port: 80,
-        default_action: { type: 'redirect', redirect: {} }
+        default_action: [{ type: 'redirect', redirect: {} }]
       )
     end
 
