@@ -130,9 +130,9 @@ module Terrafying
           actions = []
 
           default_action = port.key?(:action) ? port[:action] : forward_to_tg(port, port_ident, port_name, vpc)
-          actions.append(default_action)
 
-          port.key?(:oidc_config) ? actions.append(authenticate_oidc(port[:oidc_config])) : nil
+          actions.append(default_action)
+          actions.append(authenticate_oidc(port[:oidc_config])) if !port[:oidc_config].nil?
 
           ssl_options = alb_certs(port, port_ident)
 
@@ -174,7 +174,6 @@ module Terrafying
           authenticate_oidc: oidc_config
         }
       end
-
 
       def register_target(target_group, listener)
         @targets << Struct::Target.new(
