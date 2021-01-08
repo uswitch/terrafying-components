@@ -169,13 +169,14 @@ module Terrafying
 
       def autoscale_on_load_balancer(load_balancer, target_value:, disable_scale_in:)
         load_balancer.targets.each.with_index do |target, i|
-          policy_name = "#{load_balancer.name}-#{@name}-#{i}".gsub(%r{^(\d)}, '_\1')
+          policy_ident = "#{load_balancer.name}-#{@name}-#{i}".gsub(%r{^(\d)}, '_\1')
+          policy_name = "#{load_balancer.name}-#{@name}-#{i}"
           lb_arn = load_balancer.id.to_s.gsub(/id/, 'arn_suffix')
           tg_arn = target.target_group.to_s.gsub(/id/, 'arn_suffix')
           listener = "aws_lb_listener.#{target.listener.to_s.split('.')[1]}"
-          autoscaling_attachment = "aws_autoscaling_attachment.#{policy_name}"
+          autoscaling_attachment = "aws_autoscaling_attachment.#{policy_ident}"
 
-          resource :aws_autoscaling_policy, policy_name,
+          resource :aws_autoscaling_policy, policy_ident,
                    name: policy_name,
                    autoscaling_group_name: @asg,
                    policy_type: 'TargetTrackingScaling',
