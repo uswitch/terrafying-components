@@ -170,7 +170,7 @@ module Terrafying
         prom = Prometheus.find_in(vpc: vpc)
         ports.each do |port|
           sg_rule_ident = Digest::SHA256.hexdigest("#{vpc.name}-#{port}-#{security_group}-#{prom.security_group}")
-          resource :aws_security_group_rule, sg_rule_ident,
+          resource :aws_security_group_rule, sg_rule_ident.gsub(%r{^(\d)}, '_\1'),
                    security_group_id: security_group,
                    type: 'ingress',
                    from_port: port,
