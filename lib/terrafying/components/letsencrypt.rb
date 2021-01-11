@@ -393,6 +393,7 @@ module Terrafying
                  metric_name: "Errors",
                  namespace: "AWS/Lambda",
                  threshold: 1,
+                 statistic: "Maximum",
                  alarm_description: "Alert generated if the #{@name} certbot lambda fails execution",
                  actions_enabled: true,
                  dimensions: {
