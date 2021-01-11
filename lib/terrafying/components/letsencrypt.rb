@@ -48,9 +48,15 @@ module Terrafying
           rsa_bits: '3072',
           use_external_dns: false,
           renewing: false,
-          renew_alert_protocol: "",
-          renew_alert_endpoint: "",
-          renew_alert_endpoint_auto_confirms: false
+          renew_alert_options: {
+            protocol: "",
+            endpoint: "",
+            endpoint_auto_confirms: false,
+            confirmation_timeout_in_minutes: 1,
+            raw_message_delivery: false,
+            filter_policy: "",
+            delivery_policy: ""
+          }
         }.merge(options)
 
         @name = name
@@ -59,9 +65,7 @@ module Terrafying
         @acme_provider = @acme_providers[options[:provider]]
         @use_external_dns = options[:use_external_dns]
         @renewing = options[:renewing]
-        @renew_alert_protocol = options[:renew_alert_protocol]
-        @renew_alert_endpoint = options[:renew_alert_endpoint]
-        @renew_alert_endpoint_auto_confirms = options[:renew_alert_endpoint_auto_confirms]
+        @renew_alert_options = options[:renew_alert_options]
         @prefix_path = [@prefix, @name].reject(&:empty?).join("/")
 
         renew() if @renewing
@@ -398,10 +402,14 @@ module Terrafying
 
         resource :aws_sns_topic_subscription, "#{@name}_lambda_cloudwatch_subscription",
                  topic_arn: "${aws_sns_topic.#{@name}_lambda_cloudwatch_topic.arn}",
-                 protocol: @renew_alert_protocol,
-                 endpoint: @renew_alert_endpoint,
-                 endpoint_auto_confirms: @renew_alert_endpoint_auto_confirms
-
+                 protocol: @renew_alert_options[:protocol],
+                 endpoint: @renew_alert_options[:endpoint],
+                 endpoint_auto_confirms: @renew_alert_options[:endpoint_auto_confirms],
+                 confirmation_timeout_in_minutes: @renew_alert_options[:confirmation_timeout_in_minutes],
+                 raw_message_delivery: @renew_alert_options[:raw_message_delivery],
+                 filter_policy: @renew_alert_options[:filter_policy],
+                 delivery_policy: @renew_alert_options[:delivery_policy]
+                 
         self
       end
 
