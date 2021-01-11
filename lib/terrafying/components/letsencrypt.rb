@@ -47,7 +47,8 @@ module Terrafying
           curve: 'P384',
           rsa_bits: '3072',
           use_external_dns: false,
-          renewing: false
+          renewing: false,
+          renew_alert_endpoint: ""
         }.merge(options)
 
         @name = name
@@ -56,6 +57,7 @@ module Terrafying
         @acme_provider = @acme_providers[options[:provider]]
         @use_external_dns = options[:use_external_dns]
         @renewing = options[:renewing]
+        @renew_alert_endpoint = options[:renew_alert_endpoint]
         @prefix_path = [@prefix, @name].reject(&:empty?).join("/")
 
         renew() if @renewing
@@ -393,7 +395,7 @@ module Terrafying
         resource :aws_sns_topic_subscription, "#{@name}_lambda_cloudwatch_subscription",
                  topic_arn: "${aws_sns_topic.#{@name}_lambda_cloudwatch_topic.arn}",
                  protocol: "https",
-                 endpoint: "",
+                 endpoint: @renew_alert_endpoint,
                  endpoint_auto_confirms: true
 
         self
