@@ -47,7 +47,16 @@ module Terrafying
           curve: 'P384',
           rsa_bits: '3072',
           use_external_dns: false,
-          renewing: false
+          renewing: false,
+          renew_alert_options: {
+            protocol: nil,
+            endpoint: nil,
+            endpoint_auto_confirms: false,
+            confirmation_timeout_in_minutes: 1,
+            raw_message_delivery: false,
+            filter_policy: nil,
+            delivery_policy: nil
+          }
         }.merge(options)
 
         @name = name
@@ -56,9 +65,11 @@ module Terrafying
         @acme_provider = @acme_providers[options[:provider]]
         @use_external_dns = options[:use_external_dns]
         @renewing = options[:renewing]
+        @renew_alert_options = options[:renew_alert_options]
         @prefix_path = [@prefix, @name].reject(&:empty?).join("/")
 
         renew() if @renewing
+        renew_alert() if @renew_alert_options[:endpoint] != nil
 
         provider :tls, {}
 
@@ -324,7 +335,7 @@ module Terrafying
               )
             }
 
-        lamda_function = resource :aws_lambda_function, "#{@name}_lambda", {
+        lambda_function = resource :aws_lambda_function, "#{@name}_lambda", {
           function_name: "#{@name}_lambda",
           s3_bucket: "uswitch-certbot-lambda",
           s3_key: "certbot-lambda.zip",
@@ -355,16 +366,55 @@ module Terrafying
 
         resource :aws_cloudwatch_event_target, "#{@name}_lambda_event_target", {
           rule: event_rule["name"],
-          target_id: lamda_function["id"],
-          arn: lamda_function["arn"]
+          target_id: lambda_function["id"],
+          arn: lambda_function["arn"]
         }
 
         resource :aws_lambda_permission, "allow_cloudwatch_to_invoke_#{@name}_lambda", {
           statement_id: "AllowExecutionFromCloudWatch",
           action: "lambda:InvokeFunction",
-          function_name: lamda_function["function_name"],
+          function_name: lambda_function["function_name"],
           principal: "events.amazonaws.com",
           source_arn: event_rule["arn"]
+        }
+        self
+      end
+
+      def renew_alert
+        topic = resource :aws_sns_topic, "#{@name}_lambda_cloudwatch_topic", {
+                 name: "#{@name}_lambda_cloudwatch_topic"
+        }
+
+        alarm = resource :aws_cloudwatch_metric_alarm, "#{@name}_lambda_failure_alarm", {
+                 alarm_name: "#{@name}-lambda-failure-alarm",
+                 comparison_operator: "GreaterThanOrEqualToThreshold",
+                 evaluation_periods: "1",
+                 period: "300",
+                 metric_name: "Errors",
+                 namespace: "AWS/Lambda",
+                 threshold: 1,
+                 alarm_description: "Alert generated if the #{@name} certbot lambda fails execution",
+                 actions_enabled: true,
+                 dimensions: {
+                           FunctionName: "${aws_lambda_function.#{@name}_lambda.function_name}"
+                         },
+                 alarm_actions: [
+                           "${aws_sns_topic.#{@name}_lambda_cloudwatch_topic.arn}"
+                         ],
+                 ok_actions: [
+                          "${aws_sns_topic.#{@name}_lambda_cloudwatch_topic.arn}"
+                        ]
+        }
+
+        subscription = resource :aws_sns_topic_subscription, "#{@name}_lambda_cloudwatch_subscription", {
+                 topic_arn: "${aws_sns_topic.#{@name}_lambda_cloudwatch_topic.arn}",
+                 protocol: @renew_alert_options[:protocol],
+                 endpoint: @renew_alert_options[:endpoint],
+                 endpoint_auto_confirms: @renew_alert_options[:endpoint_auto_confirms],
+                 confirmation_timeout_in_minutes: @renew_alert_options[:confirmation_timeout_in_minutes],
+                 raw_message_delivery: @renew_alert_options[:raw_message_delivery],
+                 filter_policy: @renew_alert_options[:filter_policy],
+                 delivery_policy: @renew_alert_options[:delivery_policy]
         }
         self
       end
