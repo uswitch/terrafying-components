@@ -127,7 +127,12 @@ module Terrafying
           port_ident = "#{ident}-#{port[:downstream_port]}"
           port_name = "#{@name}-#{port[:downstream_port]}"
 
+          actions = []
+
           default_action = port.key?(:action) ? port[:action] : forward_to_tg(port, port_ident, port_name, vpc)
+
+          actions.append(default_action)
+          actions.append(authenticate_oidc(port[:oidc_config])) if !port[:oidc_config].nil?
 
           ssl_options = alb_certs(port, port_ident)
 
@@ -135,7 +140,7 @@ module Terrafying
             load_balancer_arn: @id,
             port: port[:upstream_port],
             protocol: port[:type].upcase,
-            default_action: default_action
+            default_action: actions
           }.merge(ssl_options)
 
           register_target(default_action[:target_group_arn], listener) if default_action[:type] == 'forward'
@@ -160,6 +165,13 @@ module Terrafying
         {
           type: 'forward',
           target_group_arn: target_group
+        }
+      end
+
+      def authenticate_oidc(oidc_config)
+        {
+          type: "authenticate-oidc",
+          authenticate_oidc: oidc_config
         }
       end
 
