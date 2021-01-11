@@ -69,6 +69,7 @@ module Terrafying
         @prefix_path = [@prefix, @name].reject(&:empty?).join("/")
 
         renew() if @renewing
+        renew_alert() if @renew_alert_options[:endpoint] != nil
 
         provider :tls, {}
 
@@ -376,11 +377,15 @@ module Terrafying
           principal: "events.amazonaws.com",
           source_arn: event_rule["arn"]
         }
+        self
+      end
 
-        resource :aws_sns_topic, "#{@name}_lambda_cloudwatch_topic",
+      def renew_alert
+        topic = resource :aws_sns_topic, "#{@name}_lambda_cloudwatch_topic", {
                  name: "#{@name}_lambda_cloudwatch_topic"
+        }
 
-        resource :aws_cloudwatch_metric_alarm, "#{@name}_lambda_failure_alarm",
+        alarm = resource :aws_cloudwatch_metric_alarm, "#{@name}_lambda_failure_alarm", {
                  alarm_name: "#{@name}-lambda-failure-alarm",
                  comparison_operator: "GreaterThanOrEqualToThreshold",
                  evaluation_periods: "1",
@@ -391,7 +396,7 @@ module Terrafying
                  alarm_description: "Alert generated if the #{@name} certbot lambda fails execution",
                  actions_enabled: true,
                  dimensions: {
-                           FunctionName: lambda_function["function_name"]
+                           FunctionName: "${aws_lambda_function.#{@name}_lambda.function_name}"
                          },
                  alarm_actions: [
                            "${aws_sns_topic.#{@name}_lambda_cloudwatch_topic.arn}"
@@ -399,8 +404,9 @@ module Terrafying
                  ok_actions: [
                           "${aws_sns_topic.#{@name}_lambda_cloudwatch_topic.arn}"
                         ]
+        }
 
-        resource :aws_sns_topic_subscription, "#{@name}_lambda_cloudwatch_subscription",
+        subscription = resource :aws_sns_topic_subscription, "#{@name}_lambda_cloudwatch_subscription", {
                  topic_arn: "${aws_sns_topic.#{@name}_lambda_cloudwatch_topic.arn}",
                  protocol: @renew_alert_options[:protocol],
                  endpoint: @renew_alert_options[:endpoint],
@@ -409,7 +415,7 @@ module Terrafying
                  raw_message_delivery: @renew_alert_options[:raw_message_delivery],
                  filter_policy: @renew_alert_options[:filter_policy],
                  delivery_policy: @renew_alert_options[:delivery_policy]
-
+        }
         self
       end
 
