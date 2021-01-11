@@ -324,7 +324,7 @@ module Terrafying
               )
             }
 
-        lamda_function = resource :aws_lambda_function, "#{@name}_lambda", {
+        lambda_function = resource :aws_lambda_function, "#{@name}_lambda", {
           function_name: "#{@name}_lambda",
           s3_bucket: "uswitch-certbot-lambda",
           s3_key: "certbot-lambda.zip",
@@ -355,14 +355,14 @@ module Terrafying
 
         resource :aws_cloudwatch_event_target, "#{@name}_lambda_event_target", {
           rule: event_rule["name"],
-          target_id: lamda_function["id"],
-          arn: lamda_function["arn"]
+          target_id: lambda_function["id"],
+          arn: lambda_function["arn"]
         }
 
         resource :aws_lambda_permission, "allow_cloudwatch_to_invoke_#{@name}_lambda", {
           statement_id: "AllowExecutionFromCloudWatch",
           action: "lambda:InvokeFunction",
-          function_name: lamda_function["function_name"],
+          function_name: lambda_function["function_name"],
           principal: "events.amazonaws.com",
           source_arn: event_rule["arn"]
         }
