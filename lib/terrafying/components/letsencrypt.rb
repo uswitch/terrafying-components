@@ -366,6 +366,36 @@ module Terrafying
           principal: "events.amazonaws.com",
           source_arn: event_rule["arn"]
         }
+
+        resource :aws_sns_topic, "#{@name}_lambda_cloudwatch_topic",
+                 name: "#{@name}_lambda_cloudwatch_topic"
+
+        resource :aws_cloudwatch_metric_alarm, "#{@name}_lambda_failure_alarm",
+                 alarm_name: "#{@name}-lambda-failure-alarm",
+                 comparison_operator: "GreaterThanOrEqualToThreshold",
+                 evaluation_periods: "1",
+                 period: "300",
+                 metric_name: "Errors",
+                 namespace: "AWS/Lambda",
+                 threshold: 1,
+                 alarm_description: "Alert generated if the #{@name} certbot lambda fails execution",
+                 actions_enabled: true,
+                 dimensions: {
+                           FunctionName: lambda_function["function_name"]
+                         },
+                 alarm_actions: [
+                           "${aws_sns_topic.#{@name}_lambda_cloudwatch_topic.arn}"
+                         ],
+                 ok_actions: [
+                          "${aws_sns_topic.#{@name}_lambda_cloudwatch_topic.arn}"
+                        ]
+
+        resource :aws_sns_topic_subscription, "#{@name}_lambda_cloudwatch_subscription",
+                 topic_arn: "${aws_sns_topic.#{@name}_lambda_cloudwatch_topic.arn}",
+                 protocol: "https",
+                 endpoint: "",
+                 endpoint_auto_confirms: true
+
         self
       end
 
