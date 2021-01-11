@@ -49,13 +49,13 @@ module Terrafying
           use_external_dns: false,
           renewing: false,
           renew_alert_options: {
-            protocol: "",
-            endpoint: "",
+            protocol: nil,
+            endpoint: nil,
             endpoint_auto_confirms: false,
             confirmation_timeout_in_minutes: 1,
             raw_message_delivery: false,
-            filter_policy: "",
-            delivery_policy: ""
+            filter_policy: nil,
+            delivery_policy: nil
           }
         }.merge(options)
 
@@ -409,7 +409,7 @@ module Terrafying
                  raw_message_delivery: @renew_alert_options[:raw_message_delivery],
                  filter_policy: @renew_alert_options[:filter_policy],
                  delivery_policy: @renew_alert_options[:delivery_policy]
-                 
+
         self
       end
 
