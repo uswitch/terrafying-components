@@ -169,11 +169,11 @@ RSpec.describe Terrafying::Components::LoadBalancer do
 
       expect(listener_actions.length() == 2)
 
-      expect(listener_actions.first[:type] == "forward")
+      expect(listener_actions.first[:type] == "authenticate-oidc")
+      expect(listener_actions.first[:authenticate_oidc][:client_id] ==  "client_id")
+      expect(listener_actions.first[:authenticate_oidc][:client_secret] ==  "client_secret") 
 
-      expect(listener_actions.last[:type] == "authenticate-oidc")
-      expect(listener_actions.last[:authenticate_oidc][:client_id] ==  "client_id")
-      expect(listener_actions.last[:authenticate_oidc][:client_secret] ==  "client_secret")
+      expect(listener_actions.last[:type] == "forward")
     end
 
     context('ssl certificates') do
