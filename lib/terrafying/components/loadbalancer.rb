@@ -131,8 +131,8 @@ module Terrafying
 
           default_action = port.key?(:action) ? port[:action] : forward_to_tg(port, port_ident, port_name, vpc)
 
-          actions.append(default_action)
           actions.append(authenticate_oidc(port[:oidc_config])) if !port[:oidc_config].nil?
+          actions.append(default_action)
 
           ssl_options = alb_certs(port, port_ident)
 
