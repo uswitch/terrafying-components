@@ -268,7 +268,7 @@ module Terrafying
         optional_volumes << "/etc/ssl/#{ca.name}:/etc/ssl/#{ca.name}" if ca
 
         Ignition.container_unit(
-          'openvpn-authz', 'quay.io/uswitch/openvpn-authz:2.1',
+          'openvpn-authz', 'quay.io/uswitch/openvpn-authz:2.2',
           volumes: optional_volumes + [
             '/etc/ssl/openvpn:/etc/ssl/openvpn',
             '/var/openvpn-authz:/var/openvpn-authz'
