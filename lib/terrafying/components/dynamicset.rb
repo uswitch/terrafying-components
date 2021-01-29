@@ -33,7 +33,7 @@ module Terrafying
         options = {
           public: false,
           eip: false,
-          ami: aws.ami('base-image-fc-3c48f829', owners = ['477284023816']),
+          ami: aws.ami('base-image-fc-b4b2c239', owners = ['477284023816']),
           instance_type: 't3a.micro',
           instances: { min: 1, max: 1, desired: 1, tags: {} },
           ports: [],
@@ -138,7 +138,7 @@ module Terrafying
                  protocol: -1,
                  prefix_list_ids: prefix_ids
       end
-      
+
       def default_egress_rule(ident, security_group)
         resource :aws_security_group_rule, "#{ident}-default-egress",
                  security_group_id: security_group,
