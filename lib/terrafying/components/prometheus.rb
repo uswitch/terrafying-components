@@ -377,7 +377,7 @@ module Terrafying
       def create_thanos_cloudwatch_alert(service)
         service.load_balancer.targets.each_with_index do |target, i|
           cloudwatch_alarm "#{service.name}_#{i}", 'AWS/NetworkELB',
-                           LoadBalancer: output_of('aws_lb', service.load_balancer.name, 'arn_suffix'),
+                           LoadBalancer: output_of('aws_lb', service.load_balancer.name.gsub(%r{^(\d)}, '_\1'), 'arn_suffix'),
                            TargetGroup: target.target_group.to_s.gsub(/id/, 'arn_suffix')
         end
       end
