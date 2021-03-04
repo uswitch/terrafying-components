@@ -113,6 +113,9 @@ module Terrafying
         resource :aws_cloudformation_stack, ident,
                  name: ident,
                  disable_rollback: true,
+                 lifecycle: {
+                   ignore_changes: ['disable_rollback']
+                 },
                  template_body: generate_template(
                    options[:health_check], options[:instances], launch_config,
                    options[:subnets].map(&:id), tags, options[:rolling_update]
