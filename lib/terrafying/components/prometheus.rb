@@ -7,7 +7,7 @@ require 'terrafying/components'
 module Terrafying
   module Components
     class Prometheus < Terrafying::Context
-      attr_reader :prometheus, :security_group
+      attr_reader :prometheus, :security_group, :thanos
 
       def self.create_in(options)
         new(**options).tap(&:create)
