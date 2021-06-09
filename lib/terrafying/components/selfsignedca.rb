@@ -167,7 +167,8 @@ module Terrafying
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-key-latest",
                      bucket: @bucket,
                      key: object_key(name, :key, 'latest'),
-                     content: key_version
+                     content: key_version,
+                     content_type: "text/plain"
 
         cert_version = "${sha256(tls_locally_signed_cert.#{key_ident}.cert_pem)}"
         ctx.resource :aws_s3_bucket_object, object_name(name, :cert),
@@ -177,7 +178,8 @@ module Terrafying
         ctx.resource :aws_s3_bucket_object, "#{key_ident}-cert-latest",
                      bucket: @bucket,
                      key: object_key(name, :cert, 'latest'),
-                     content: cert_version
+                     content: cert_version,
+                     content_type: "text/plain"
 
         reference_keypair(ctx, name, key_version: key_version, cert_version: cert_version)
       end
