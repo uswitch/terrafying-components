@@ -81,7 +81,8 @@ module Terrafying
               store:,
               topic:,
               include_all_regions: true,
-              include_all_organisation: true
+              include_all_organisation: true,
+              ignore_buckets: []
             )
 
           @name = name
@@ -142,6 +143,8 @@ module Terrafying
                      policy_arn: log_role_policy["arn"],
                    }
 
+          s3_data_selectors = bucket_selector(ignore_buckets)
+
           resource :aws_cloudtrail, "#{name}", {
                      name: "#{name}",
                      s3_bucket_name: store.name,
@@ -165,18 +168,79 @@ module Terrafying
                            values: ["arn:aws:lambda"],
                          },
                        },
-                       {
-                         read_write_type: "All",
-                         include_management_events: true,
-
-                         data_resource: {
-                           type: "AWS::S3::Object",
-                           values: ["arn:aws:s3:::"],
-                         },
-                       },
                      ],
-                   }
+
+                   }.deep_merge(s3_data_selectors)
           self
+        end
+
+        def bucket_selector(buckets)
+          buckets = Array(buckets)
+
+          return all_buckets if buckets.empty?
+
+          {
+            advanced_event_selector: [
+              ignore_buckets_selectors(buckets),
+              management_events_selector,
+            ]
+          }
+        end
+
+        def all_buckets
+          {
+            event_selector: [
+              {
+                read_write_type: "All",
+                include_management_events: true,
+
+                data_resource: {
+                  type: "AWS::S3::Object",
+                  values: ["arn:aws:s3:::"],
+                }
+              }
+            ]
+          }
+        end
+
+        def ignore_buckets_selectors(buckets)
+          ignore_bucket_arns = Array(buckets).map { |bucket|
+            data_name = Digest::SHA256.hexdigest("#{@name}-#{bucket}")[0..16]
+            arn = data(:aws_s3_bucket, "ct-ignore-#{data_name}", bucket: bucket)['arn']
+            "#{arn}/"
+          }
+
+          {
+            name: "Log all S3 buckets objects events except these",
+
+            field_selector: [
+              {
+                field: 'eventCategory',
+                equals: ['Data']
+              },
+              {
+                field: 'resources.type',
+                equals: ['AWS::S3::Object']
+              },
+              {
+                field: 'resources.ARN',
+                not_equals: ignore_bucket_arns
+              }
+            ],
+          }
+        end
+
+        def management_events_selector
+          {
+            name: "Log readOnly and writeOnly management events",
+
+            field_selector: [
+              {
+                field: "eventCategory",
+                equals: ["Management"]
+              }
+            ]
+          }
         end
 
         def alert!(name:, pattern:, threshold: 1, topic: @topic)
