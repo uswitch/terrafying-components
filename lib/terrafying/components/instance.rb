@@ -2,6 +2,7 @@
 
 require 'xxhash'
 
+require 'terrafying'
 require 'terrafying/components/ports'
 require 'terrafying/components/usable'
 
