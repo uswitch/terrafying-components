@@ -143,7 +143,7 @@ module Terrafying
                      policy_arn: log_role_policy["arn"],
                    }
 
-          s3_data_selectors = bucket_selector(ignore_buckets)
+          data_event_selectors = event_selector(ignore_buckets)
 
           resource :aws_cloudtrail, "#{name}", {
                      name: "#{name}",
@@ -158,36 +158,25 @@ module Terrafying
                      cloud_watch_logs_group_arn: "#{@log_group["arn"]}:*",
                      cloud_watch_logs_role_arn: log_role["arn"],
 
-                     event_selector: [
-                       {
-                         read_write_type: "All",
-                         include_management_events: true,
-
-                         data_resource: {
-                           type: "AWS::Lambda::Function",
-                           values: ["arn:aws:lambda"],
-                         },
-                       },
-                     ],
-
-                   }.deep_merge(s3_data_selectors)
+                   }.deep_merge(data_event_selectors)
           self
         end
 
-        def bucket_selector(buckets)
+        def event_selector(buckets)
           buckets = Array(buckets)
 
-          return all_buckets if buckets.empty?
+          return basic_selector if buckets.empty?
 
           {
             advanced_event_selector: [
               ignore_buckets_selectors(buckets),
               management_events_selector,
+              lambda_events
             ]
           }
         end
 
-        def all_buckets
+        def basic_selector
           {
             event_selector: [
               {
@@ -198,6 +187,15 @@ module Terrafying
                   type: "AWS::S3::Object",
                   values: ["arn:aws:s3:::"],
                 }
+              },
+              {
+                read_write_type: "All",
+                include_management_events: true,
+
+                data_resource: {
+                  type: "AWS::Lambda::Function",
+                  values: ["arn:aws:lambda"],
+                },
               }
             ]
           }
@@ -211,7 +209,7 @@ module Terrafying
           }
 
           {
-            name: "Log all S3 buckets objects events except these",
+            name: 'Log all S3 buckets objects events except these',
 
             field_selector: [
               {
@@ -232,12 +230,29 @@ module Terrafying
 
         def management_events_selector
           {
-            name: "Log readOnly and writeOnly management events",
+            name: 'Log readOnly and writeOnly management events',
 
             field_selector: [
               {
                 field: "eventCategory",
                 equals: ["Management"]
+              }
+            ]
+          }
+        end
+
+        def lambda_events
+          {
+            name: 'Log Lambda data events',
+
+            field_selector: [
+              {
+                field: 'eventCategory',
+                equals: ['Data']
+              },
+              {
+                field: 'resources.type',
+                equals: ['AWS::Lambda::Function']
               }
             ]
           }

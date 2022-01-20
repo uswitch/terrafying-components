@@ -84,7 +84,8 @@ RSpec.describe Terrafying::Components::Security::Trail, '#create' do
 
         event_selectors = trail(name, ctx)[:event_selector]
 
-        expect(event_selectors).not_to include(
+        expect(event_selectors).to be_nil
+        expect(Array(event_selectors)).not_to include(
             a_hash_including(
                 read_write_type: "All",
                 data_resource: {
@@ -102,6 +103,22 @@ RSpec.describe Terrafying::Components::Security::Trail, '#create' do
 
         expect(s3_bucket).not_to be_nil
         expect(s3_bucket).to include(bucket: bucket_name)
+      end
+
+      it('should return an advanced selector for lambda data events') do
+        ctx = described_class.create(name, store: store, topic: 'test-topic', ignore_buckets: [bucket_name])
+
+        advanced_selectors = trail(name, ctx)[:advanced_event_selector]
+
+        expect(advanced_selectors).to include(
+            a_hash_including(
+                name: 'Log Lambda data events',
+                field_selector: array_including(
+                    {field: 'eventCategory',  equals: ['Data']},
+                    {field: 'resources.type', equals: ['AWS::Lambda::Function']},
+                )
+            )
+        )
       end
 
     end
