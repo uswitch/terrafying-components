@@ -222,7 +222,7 @@ module Terrafying
               },
               {
                 field: 'resources.ARN',
-                not_equals: ignore_bucket_arns
+                not_starts_with: ignore_bucket_arns
               }
             ],
           }
