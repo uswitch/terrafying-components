@@ -58,7 +58,7 @@ RSpec.describe Terrafying::Components::Security::Trail, '#create' do
                 field_selector: array_including(
                     {field: 'eventCategory',  equals: ['Data']},
                     {field: 'resources.type', equals: ['AWS::S3::Object']},
-                    {field: 'resources.ARN',  not_equals: array_including(bucket_arn)},
+                    {field: 'resources.ARN',  not_starts_with: array_including(bucket_arn)},
                 )
             )
         )
