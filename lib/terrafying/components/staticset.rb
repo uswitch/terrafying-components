@@ -38,7 +38,7 @@ module Terrafying
         options = {
           public: false,
           eip: false,
-          ami: aws.ami('base-image-fc-f50b677a', owners = ['477284023816']),
+          ami: aws.ami('base-image-fc-75aa2aef', owners = ['477284023816']),
           instance_type: 't3a.micro',
           subnets: vpc.subnets.fetch(:private, []),
           ports: [],
