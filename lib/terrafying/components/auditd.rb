@@ -3,11 +3,11 @@
 module Terrafying
   module Components
     class Auditd
-      def self.fluentd_conf(role, tags = [])
-        new.fluentd_conf(role, tags)
+      def self.fluentd_conf(ignition, role, tags = [])
+        new.fluentd_conf(ignition, role, tags)
       end
 
-      def fluentd_conf(role, tags)
+      def fluentd_conf(ignition, role, tags)
         tags = default_tags.merge(
           custom_tags(tags)
         )
@@ -15,8 +15,8 @@ module Terrafying
         {
           files: [
             systemd_input,
-            ec2_filter(tags),
-            s3_output(role)
+            ec2_filter(ignition, tags),
+            s3_output(ignition, role)
           ],
           iam_policy_statements: [
             allow_describe_instances,
@@ -66,7 +66,7 @@ module Terrafying
       def file_of(name, content)
         {
           path: "/etc/fluentd/conf.d/#{name}.conf",
-          mode: 0o644,
+          mode: '0o644',
           contents: content
         }
       end
@@ -103,7 +103,7 @@ module Terrafying
         )
       end
 
-      def ec2_filter(tags)
+      def ec2_filter(ignition, tags)
         file_of(
           '20_auditd_filter_ec2',
           <<~EC2_FILTER
@@ -111,47 +111,89 @@ module Terrafying
               @type ec2_metadata
               metadata_refresh_seconds 300
               <record>
-                #{map_tags(tags)}
+                #{map_tags(ignition, tags)}
               </record>
             </filter>
           EC2_FILTER
         )
       end
 
-      def map_tags(tags)
-        tags.map { |k, v| "#{k} ${#{v}}" }
-            .reduce { |out, e| +out << "\n    #{e}" }
+      def map_tags(ignition, tags)
+        if ignition == false
+          # added extra $ as escape character
+          q = tags.map { |k, v| "#{k} $${#{v}}" }
+              .reduce { |out, e| +out << "\n    #{e}" }
+        else
+          # added extra $ as escape character
+          q = tags.map { |k, v| "#{k} ${#{v}}" }
+              .reduce { |out, e| +out << "\n    #{e}" }
+        end
+        q
       end
 
-      def s3_output(audit_role)
-        file_of(
-          '30_auditd_output_s3',
-          <<~S3_OUTPUT
-            <match auditd>
-              @type s3
-              <assume_role_credentials>
-                role_arn #{audit_role}
-                role_session_name "auditd-logging-\#{Socket.gethostname}"
-              </assume_role_credentials>
-              auto_create_bucket false
-              s3_bucket uswitch-auditd-logs
-              s3_region eu-west-1
-              acl bucket-owner-full-control
-              path auditd/%Y/%m/%d/
-              s3_object_key_format "\%{path}\%{time_slice}_\#{Socket.gethostname}.\%{file_extension}"
-              <buffer time>
-                @type file
-                path /fluent/var/s3
-                timekey 300 # 5 minute partitions
-                timekey_wait 0s
-                timekey_use_utc true
-              </buffer>
-              <format>
-                @type json
-              </format>
-            </match>
-          S3_OUTPUT
-        )
+      def s3_output(ignition, audit_role)
+        if ignition == false
+           # added extra % as escape character
+           y = file_of(
+             '30_auditd_output_s3',
+             <<~S3_OUTPUT
+               <match auditd>
+                 @type s3
+                 <assume_role_credentials>
+                   role_arn #{audit_role}
+                   role_session_name "auditd-logging-\#{Socket.gethostname}"
+                 </assume_role_credentials>
+                 auto_create_bucket false
+                 s3_bucket uswitch-auditd-logs
+                 s3_region eu-west-1
+                 acl bucket-owner-full-control
+                 path auditd/%Y/%m/%d/
+                 s3_object_key_format "\%%{path}\%%{time_slice}_\#{Socket.gethostname}.\%%{file_extension}"
+                 <buffer time>
+                   @type file
+                   path /fluent/var/s3
+                   timekey 300 # 5 minute partitions
+                   timekey_wait 0s
+                   timekey_use_utc true
+                 </buffer>
+                 <format>
+                   @type json
+                 </format>
+               </match>
+             S3_OUTPUT
+           )
+        else
+          # added extra % as escape character
+          y = file_of(
+            '30_auditd_output_s3',
+            <<~S3_OUTPUT
+              <match auditd>
+                @type s3
+                <assume_role_credentials>
+                  role_arn #{audit_role}
+                  role_session_name "auditd-logging-\#{Socket.gethostname}"
+                </assume_role_credentials>
+                auto_create_bucket false
+                s3_bucket uswitch-auditd-logs
+                s3_region eu-west-1
+                acl bucket-owner-full-control
+                path auditd/%Y/%m/%d/
+                s3_object_key_format "\%{path}\%{time_slice}_\#{Socket.gethostname}.\%{file_extension}"
+                <buffer time>
+                  @type file
+                  path /fluent/var/s3
+                  timekey 300 # 5 minute partitions
+                  timekey_wait 0s
+                  timekey_use_utc true
+                </buffer>
+                <format>
+                  @type json
+                </format>
+              </match>
+            S3_OUTPUT
+          )
+          y
+        end
       end
     end
   end

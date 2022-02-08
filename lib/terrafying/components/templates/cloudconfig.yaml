@@ -1,0 +1,62 @@
+#cloud-config
+write_files:
+<% units.each { |unit| %>
+- path: "/etc/systemd/system/<%= unit[:name] %>"
+  content: "<%= unit[:contents].dump[1..-2] %>"
+  owner: "root:root"
+<% } %>
+
+<% files.each { |file| %>
+- path: <%= file[:path] %>
+  permissions: '<%= file[:mode] %>'
+  owner: "root:root"
+  <% if !file[:contents].is_a?(Hash) %>
+  content: "<%= file[:contents].gsub(/\n/, '\\n').gsub(/\"/, '\\"') %>"
+  <% end %>
+<% } %>
+
+<% volumes.each { |volume| %>
+- path: "/etc/systemd/system/<%= volume[:mount].tr('/','-')[1..-1] %>.mount"
+  owner: "root:root"
+  content: |
+    [Install]
+    WantedBy=local-fs.target
+    [Unit]
+    Before=docker.service
+    [Mount]
+    What=<%= volume[:device] %>
+    Where=<%= volume[:mount] %>
+    Type=ext4
+<% } %>
+
+- path:  '/etc/usersync.env'
+  permissions:  0644
+  owner: "root:root"
+  content: |
+    USERSYNC_SSH_GROUP="<%= ssh_group %>"
+
+
+runcmd:
+<% units.each { |unit| %>
+- systemctl restart <%= unit[:name] %>
+- systemctl enable <%= unit[:name] %>
+<% } %>
+<% keypairs.each { |keypair| %>
+- aws s3 cp <%= keypair[:source][:cert] %> <%= keypair[:path][:cert] %>
+- aws s3 cp <%= keypair[:source][:key] %> <%= keypair[:path][:key] %>
+<% } %>
+<% cas.each { |ca| %>
+- aws s3 cp <%= ca.source %> /etc/ssl/<%= ca.name %>/ca.cert
+<% } %>
+
+<% files.each { |file| %>
+  <% if file[:contents].is_a?(Hash) %>
+- aws s3 cp <%= file[:contents][:source] %> <%= file[:path] %>
+  <% end %>
+<% } %>
+
+<% volumes.each { |volume| %>
+- mkfs -t ext4 <%= volume[:device] %>
+- mount <%= volume[:device] %> <%= volume[:mount].tr('/','-')[1..-1] %>
+- systemctl enable <%= volume[:mount].tr('/','-')[1..-1] %>.mount
+<% } %>

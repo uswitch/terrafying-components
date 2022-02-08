@@ -20,6 +20,8 @@ module Terrafying
       def initialize(
         vpc:,
         thanos_name: 'thanos',
+        ignition: true,
+        ami: '',
         thanos_version: 'v0.18.0',
         prom_name: 'prometheus',
         prom_version: 'v2.25.0',
@@ -34,6 +36,8 @@ module Terrafying
         super()
         @vpc = vpc
         @thanos_name = thanos_name
+        @ignition = ignition
+        @ami = ami
         @thanos_version = thanos_version
         @prom_name = prom_name
         @prom_version = prom_version
@@ -77,8 +81,11 @@ module Terrafying
       end
 
       def create_prom
+        # added ignition variable 
+        # it is set to true, so it will ignition for now
+        # we will change this soon and use amazon linux's cloud config
         @prom_service = add! Terrafying::Components::Service.create_in(
-          @vpc, @prom_name,
+          @vpc, @prom_name, @ignition,
           ports: [
             {
               type: 'tcp',
@@ -96,7 +103,9 @@ module Terrafying
           instance_type: @prometheus_instance_type,
           iam_policy_statements: thanos_store_access,
           instances: [{}] * @instances,
+          ami: @ami,
           units: [prometheus_unit, thanos_sidecar_unit],
+          disable_update_engine: true, # so that flatcar don't get updated
           files: [prometheus_conf, thanos_bucket],
           volumes: [prometheus_data_volume],
           tags: {
@@ -109,8 +118,11 @@ module Terrafying
       end
 
       def create_thanos(prometheus_thanos_sidecar_srv_fqdn)
+        # added ignition variable 
+        # it is set to true, so it will ignition for now
+        # we will change this soon and use amazon linux's cloud config
         @thanos_service = add! Terrafying::Components::Service.create_in(
-          @vpc, @thanos_name,
+          @vpc, @thanos_name, @ignition,
           ports: [
             {
               type: 'tcp',
@@ -130,7 +142,9 @@ module Terrafying
           ],
           instance_type: @thanos_instance_type,
           units: [thanos_unit(prometheus_thanos_sidecar_srv_fqdn)],
+          disable_update_engine: true, # so that flatcar don't get updated
           instances: [{}] * @instances,
+          ami: @ami,
           loadbalancer: true,
           tags: {
             prometheus_port: 10_902,
@@ -167,7 +181,7 @@ module Terrafying
             ExecStartPre=-/usr/bin/docker rm prometheus
             ExecStartPre=/usr/bin/docker pull quay.io/prometheus/prometheus:#{@prom_version}
             ExecStartPre=-/usr/bin/sed -i "s/{{HOST}}/%H/" /opt/prometheus/prometheus.yml
-            ExecStartPre=/usr/bin/install -d -o nobody -g nobody -m 0755 #{@prometheus_data_dir}
+            ExecStartPre=/usr/bin/install -d -o nobody -g nobody -m 0777 #{@prometheus_data_dir}
             ExecStart=/usr/bin/docker run --name prometheus \
               -p 9090:9090 \
               --network=prom \
@@ -228,7 +242,7 @@ module Terrafying
       def prometheus_conf
         {
           path: '/opt/prometheus/prometheus.yml',
-          mode: 0o644,
+          mode: '0o644',
           contents: ERB.new(<<~'END', 0, '-', '_').result(binding)
             global:
               external_labels:
@@ -315,7 +329,7 @@ module Terrafying
       def thanos_bucket
         {
           path: '/opt/thanos/bucket.yml',
-          mode: 0o644,
+          mode: '0o644',
           contents: <<~S3CONF
             type: S3
             config:

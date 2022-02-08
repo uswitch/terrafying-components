@@ -5,6 +5,7 @@ require 'hash/merge_with_arrays'
 require 'terrafying/generator'
 require 'terrafying/util'
 require 'terrafying/components/auditd'
+require 'terrafying/components/cloudconfig'
 require 'terrafying/components/dynamicset'
 require 'terrafying/components/endpointservice'
 require 'terrafying/components/ignition'
@@ -23,8 +24,8 @@ module Terrafying
 
       include Usable
 
-      def self.create_in(vpc, name, options = {})
-        Service.new.create_in vpc, name, options
+      def self.create_in(vpc, name, ignition, options = {})
+        Service.new.create_in vpc, name, ignition, options
       end
 
       def self.find_in(vpc, name)
@@ -39,7 +40,7 @@ module Terrafying
         raise 'unimplemented'
       end
 
-      def create_in(vpc, name, options = {})
+      def create_in(vpc, name, ignition, options = {})
         options = {
           ami: aws.ami('base-image-fc-75aa2aef', owners = ['477284023816']),
           instance_type: 't3a.micro',
@@ -66,14 +67,16 @@ module Terrafying
         }.merge(options)
 
         unless options[:audit_role].nil?
-          fluentd_conf = Auditd.fluentd_conf(options[:audit_role], options[:tags].keys)
+          fluentd_conf = Auditd.fluentd_conf(ignition, options[:audit_role], options[:tags].keys)
           options = options.merge_with_arrays_merged(fluentd_conf)
         end
-
-        unless options.key? :user_data
-          options[:user_data] = Ignition.generate(options)
+        unless options.key? :user_data 
+          if ignition == true 
+            options[:user_data] = Ignition.generate(options) 
+          elsif ignition == false 
+            options[:user_data] = Cloudconfig.generate(options) 
+          end 
         end
-
         unless options.key?(:loadbalancer_subnets)
           options[:loadbalancer_subnets] = options[:subnets]
         end

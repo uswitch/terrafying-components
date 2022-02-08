@@ -35,6 +35,8 @@ module Terrafying
       def initialize(
         vpc:,
         name:,
+        ignition: true,
+        ami:'',
         client_id:,
         issuer_url:,
         ca: nil,
@@ -53,6 +55,8 @@ module Terrafying
         super()
         @vpc = vpc
         @name = name
+        @ignition = ignition
+        @ami = ami
         @client_id = client_id
         @issuer_url = issuer_url
         @ca = ca
@@ -96,17 +100,21 @@ module Terrafying
           subnet = @subnets.first
           instances = [{ subnet: subnet, ip_address: subnet.ip_addresses.first }]
         end
-
+        # added ignition flag 
+        # it is set to true, so it will ignition for now
+        # we will change this soon and use amazon linux's cloud config
         @service = add! Service.create_in(
-          @vpc, @name,
+          @vpc, @name, @ignition,
           {
             eip: @public,
             public: @public,
             ports: [22, 443, { number: 1194, type: 'udp' }],
             tags:@tags,
+            ami: @ami,
             units: units + @units,
             files: files,
             keypairs: keypairs,
+            disable_update_engine: true,
             subnets: @subnets,
             instances: instances,
             iam_policy_statements: [

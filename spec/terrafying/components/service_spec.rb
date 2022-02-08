@@ -16,7 +16,7 @@ RSpec.describe Terrafying::Components::Service do
   context 'cfn signal' do
     it 'should add an iam permission to cfn signal' do
       service = Terrafying::Components::Service.create_in(
-        @vpc, 'foo',
+        @vpc, 'foo', ignition = true,
         instances: { min: 1, max: 1, desired: 1 },
         rolling_update: :signal
       )
@@ -37,7 +37,7 @@ RSpec.describe Terrafying::Components::Service do
 
     it 'should not add an iam permission by default' do
       service = Terrafying::Components::Service.create_in(
-        @vpc, 'foo',
+        @vpc, 'foo', ignition = true,
         instances: { min: 1, max: 1, desired: 1 }
       )
 
@@ -59,7 +59,7 @@ RSpec.describe Terrafying::Components::Service do
   it 'should use user_data if passed in' do
     user_data = 'something'
     service = Terrafying::Components::Service.create_in(
-      @vpc, 'foo',
+      @vpc, 'foo', ignition = true,
       user_data: user_data
     )
 
@@ -71,7 +71,7 @@ RSpec.describe Terrafying::Components::Service do
   it 'should generate user_data if not explicitly given' do
     unit = Terrafying::Components::Ignition.container_unit('app', 'app:latest')
     service = Terrafying::Components::Service.create_in(
-      @vpc, 'foo',
+      @vpc, 'foo', ignition = true,
       units: [unit]
     )
 
@@ -85,7 +85,7 @@ RSpec.describe Terrafying::Components::Service do
   it 'should add fluentd config for auditd logs to user data if user data not explicitly given' do
     unit = Terrafying::Components::Ignition.container_unit('app', 'app:latest')
     service = Terrafying::Components::Service.create_in(
-      @vpc, 'foo',
+      @vpc, 'foo', ignition = true,
       units: [unit]
     )
 
@@ -97,7 +97,7 @@ RSpec.describe Terrafying::Components::Service do
   it 'should add fluentd config for auditd logs to user data with the default audit role' do
     unit = Terrafying::Components::Ignition.container_unit('app', 'app:latest')
     service = Terrafying::Components::Service.create_in(
-      @vpc, 'foo',
+      @vpc, 'foo', ignition = true,
       units: [unit]
     )
 
@@ -113,7 +113,7 @@ RSpec.describe Terrafying::Components::Service do
   it 'should add fluentd config for auditd logs to user data with the audit role specified' do
     unit = Terrafying::Components::Ignition.container_unit('app', 'app:latest')
     service = Terrafying::Components::Service.create_in(
-      @vpc, 'foo',
+      @vpc, 'foo', ignition = true,
       units: [unit],
       audit_role: 'an-audit-role'
     )
@@ -130,7 +130,7 @@ RSpec.describe Terrafying::Components::Service do
   it 'should add iam policy to assume audit role specified' do
     unit = Terrafying::Components::Ignition.container_unit('app', 'app:latest')
     service = Terrafying::Components::Service.create_in(
-      @vpc, 'foo',
+      @vpc, 'foo', ignition = true,
       units: [unit],
       audit_role: 'an-audit-role'
     )
@@ -157,7 +157,7 @@ RSpec.describe Terrafying::Components::Service do
 
       unit = Terrafying::Components::Ignition.container_unit('app', 'app:latest')
       service = Terrafying::Components::Service.create_in(
-        @vpc, 'foo',
+        @vpc, 'foo', ignition = true,
         units: [unit],
         iam_policy_statements: [specified_policy]
       )
@@ -174,7 +174,7 @@ RSpec.describe Terrafying::Components::Service do
     keypair = ca.create_keypair('keys')
 
     service = Terrafying::Components::Service.create_in(
-      @vpc, 'foo',
+      @vpc, 'foo', ignition = true,
       keypairs: [keypair]
     )
 
@@ -185,7 +185,7 @@ RSpec.describe Terrafying::Components::Service do
 
   it 'should create a dynamic set when instances is a hash' do
     service = Terrafying::Components::Service.create_in(
-      @vpc, 'foo',
+      @vpc, 'foo', ignition = true,
       instances: { min: 1, max: 1, desired: 1, tags: {} }
     )
 
@@ -196,7 +196,7 @@ RSpec.describe Terrafying::Components::Service do
 
   it 'should pass down instance tags to asg' do
     service = Terrafying::Components::Service.create_in(
-      @vpc, 'foo',
+      @vpc, 'foo', ignition = true,
       instances: { min: 1, max: 1, desired: 1, tags: { foo: 'bar' } }
     )
 
@@ -215,7 +215,7 @@ RSpec.describe Terrafying::Components::Service do
   context 'asg health check' do
     it 'it should default to EC2 checks' do
       service = Terrafying::Components::Service.create_in(
-        @vpc, 'foo',
+        @vpc, 'foo', ignition = true,
         instances: { min: 1, max: 1, desired: 1, tags: {} },
         ports: [443]
       )
@@ -229,7 +229,7 @@ RSpec.describe Terrafying::Components::Service do
 
     it 'should set an elb health check on dynamic set if it has a load balancer and some health checks' do
       service = Terrafying::Components::Service.create_in(
-        @vpc, 'foo',
+        @vpc, 'foo', ignition = true,
         instances: { min: 1, max: 1, desired: 1, tags: {} },
         ports: [{ number: 443, health_check: { path: '/foo', protocol: 'HTTPS' } }]
       )
@@ -244,7 +244,7 @@ RSpec.describe Terrafying::Components::Service do
 
   it 'should create a static set when instances is an array' do
     service = Terrafying::Components::Service.create_in(
-      @vpc, 'foo',
+      @vpc, 'foo', ignition = true,
       instances: [{}, {}]
     )
 
@@ -256,7 +256,7 @@ RSpec.describe Terrafying::Components::Service do
   it 'should error when instances is something unknown' do
     expect do
       Terrafying::Components::Service.create_in(
-        @vpc, 'foo',
+        @vpc, 'foo', ignition = true,
         instances: 3
       )
     end.to raise_error RuntimeError
@@ -264,7 +264,7 @@ RSpec.describe Terrafying::Components::Service do
 
   context 'private link' do
     it "shouldn't work if there isn't a load balancer" do
-      service = Terrafying::Components::Service.create_in(@vpc, 'foo')
+      service = Terrafying::Components::Service.create_in(@vpc, 'foo', ignition = true)
 
       expect do
         service.with_endpoint_service
@@ -273,7 +273,7 @@ RSpec.describe Terrafying::Components::Service do
 
     it "shouldn't work if it's an ALB" do
       service = Terrafying::Components::Service.create_in(
-        @vpc, 'foo',
+        @vpc, 'foo', ignition = true,
         ports: [{ number: 443, type: 'https' }]
       )
 
@@ -284,7 +284,7 @@ RSpec.describe Terrafying::Components::Service do
 
     it 'should generate a service resource' do
       service = Terrafying::Components::Service.create_in(
-        @vpc, 'foo',
+        @vpc, 'foo', ignition = true,
         instances: { min: 1, max: 1, desired: 1, tags: {} },
         ports: [443]
       )
@@ -300,7 +300,7 @@ RSpec.describe Terrafying::Components::Service do
   context 'load balancer' do
     it 'should create the security groups for ALB to talk to ASG' do
       service = Terrafying::Components::Service.create_in(
-        @vpc, 'foo',
+        @vpc, 'foo', ignition = true,
         instances: { min: 1, max: 1, desired: 1, tags: {} },
         ports: [{ type: 'https', number: 443 }]
       )
@@ -331,7 +331,7 @@ RSpec.describe Terrafying::Components::Service do
 
     it 'should create the security groups for ALB to talk to instances' do
       service = Terrafying::Components::Service.create_in(
-        @vpc, 'foo',
+        @vpc, 'foo', ignition = true,
         ports: [{ type: 'https', number: 443 }],
         loadbalancer: true
       )
@@ -350,7 +350,7 @@ RSpec.describe Terrafying::Components::Service do
 
     it 'should create no security groups for NLBs' do
       service = Terrafying::Components::Service.create_in(
-        @vpc, 'foo',
+        @vpc, 'foo', ignition = true,
         instances: { min: 1, max: 1, desired: 1, tags: {} },
         ports: [443]
       )
@@ -367,13 +367,13 @@ RSpec.describe Terrafying::Components::Service do
 
     it "shouldn't use ALB as egress security group when binding services" do
       service_a = Terrafying::Components::Service.create_in(
-        @vpc, 'foo-a',
+        @vpc, 'foo-a', ignition = true,
         instances: { min: 1, max: 1, desired: 1, tags: {} },
         ports: [{ type: 'https', number: 443 }]
       )
 
       service_b = Terrafying::Components::Service.create_in(
-        @vpc, 'foo-b',
+        @vpc, 'foo-b', ignition = true,
         instances: { min: 1, max: 1, desired: 1, tags: {} },
         ports: [{ type: 'https', number: 443 }]
       )
@@ -403,7 +403,7 @@ RSpec.describe Terrafying::Components::Service do
 
     context('instance profiles') do
       it 'should use the specified instance profile' do
-        service = Terrafying::Components::Service.create_in(@vpc, 'foo', instance_profile: 'magical-instance-profile')
+        service = Terrafying::Components::Service.create_in(@vpc, 'foo', ignition = true, instance_profile: 'magical-instance-profile')
 
         ec2_instance = service.output_with_children['resource']['aws_instance'].values.first
         expect(ec2_instance).to include(
@@ -412,7 +412,7 @@ RSpec.describe Terrafying::Components::Service do
       end
 
       it 'should use the specified instance profile for ASGs' do
-        service = Terrafying::Components::Service.create_in(@vpc, 'foo', instances: { min: 1, max: 1, desired: 1, tags: {} }, instance_profile: 'magical-instance-profile')
+        service = Terrafying::Components::Service.create_in(@vpc, 'foo', ignition = true, instances: { min: 1, max: 1, desired: 1, tags: {} }, instance_profile: 'magical-instance-profile')
 
         launch_config = service.output_with_children['resource']['aws_launch_configuration'].values.first
         expect(launch_config).to include(
@@ -427,7 +427,7 @@ RSpec.describe Terrafying::Components::Service do
         prom_sec_group = 'sg-1234567890'
         allow(@vpc.aws).to receive(:security_group_in_vpc).and_return(prom_sec_group)
 
-        service = Terrafying::Components::Service.create_in(@vpc, 'foo', metrics_ports: [port])
+        service = Terrafying::Components::Service.create_in(@vpc, 'foo', ignition = true, metrics_ports: [port])
 
         rules = service.output_with_children['resource']['aws_security_group_rule'].values
 
