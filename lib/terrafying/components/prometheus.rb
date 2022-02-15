@@ -24,6 +24,7 @@ module Terrafying
         prom_name: 'prometheus',
         prom_version: 'v2.25.0',
         instances: 2,
+        ami:'',
         instance_type: 't3a.small',
         thanos_instance_type: 't3a.small',
         prometheus_tsdb_retention: '1d',
@@ -38,6 +39,7 @@ module Terrafying
         @prom_name = prom_name
         @prom_version = prom_version
         @instances = instances
+        @ami = ami
         @prometheus_instance_type = instance_type
         @thanos_instance_type = thanos_instance_type
         @prometheus_tsdb_retention = prometheus_tsdb_retention
@@ -96,6 +98,7 @@ module Terrafying
           instance_type: @prometheus_instance_type,
           iam_policy_statements: thanos_store_access,
           instances: [{}] * @instances,
+          ami: @ami,
           units: [prometheus_unit, thanos_sidecar_unit],
           files: [prometheus_conf, thanos_bucket],
           volumes: [prometheus_data_volume],
@@ -129,6 +132,7 @@ module Terrafying
             }
           ],
           instance_type: @thanos_instance_type,
+          ami: @ami,
           units: [thanos_unit(prometheus_thanos_sidecar_srv_fqdn)],
           instances: [{}] * @instances,
           loadbalancer: true,

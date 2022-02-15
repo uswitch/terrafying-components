@@ -46,7 +46,6 @@ shared_examples 'a usable resource' do
     @main_resource.used_by_cidr(*cidrs)
 
     output = @main_resource.output_with_children
-
     expect(output['resource']['aws_security_group_rule'].count).to be >= (ports.count * cidrs.count)
 
     expect(
