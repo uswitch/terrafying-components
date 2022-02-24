@@ -35,6 +35,8 @@ module Terrafying
       def initialize(
         vpc:,
         name:,
+        ignition: true,
+        ami: '',
         client_id:,
         issuer_url:,
         ca: nil,
@@ -53,6 +55,8 @@ module Terrafying
         super()
         @vpc = vpc
         @name = name
+        @ignition = ignition
+        @ami = ami
         @client_id = client_id
         @issuer_url = issuer_url
         @ca = ca
@@ -74,6 +78,7 @@ module Terrafying
       def create_in
         units = [
           openvpn_service,
+          add_iptables_rules_service,
           openvpn_authz_service(@ca, @fqdn, @route_all_traffic, @route_dns_entries, @groups, @client_id, @issuer_url),
         ]
 
@@ -100,10 +105,12 @@ module Terrafying
         @service = add! Service.create_in(
           @vpc, @name,
           {
+            ignition: @ignition,
             eip: @public,
             public: @public,
             ports: [22, 443, { number: 1194, type: 'udp' }],
             tags:@tags,
+            ami:@ami,
             units: units + @units,
             files: files,
             keypairs: keypairs,
@@ -243,6 +250,24 @@ module Terrafying
           }
       end
 
+      # these iptables rules are needed in order to get VPN working
+      def add_iptables_rules_service
+        {
+          name: 'add-iptables-rules.service',
+          enabled: false,
+          contents: <<~ADD_IPTABLES_RULE
+              [Install]
+              WantedBy=multi-user.target
+              [Unit]
+              Description=Add Iptables rules
+              [Service]
+              Type=oneshot
+              ExecStartPre=/sbin/iptables -A FORWARD -i tun+ -j ACCEPT
+              ExecStart=/sbin/iptables -A FORWARD -o tun+ -j ACCEPT
+          ADD_IPTABLES_RULE
+          }
+      end
+
       def openvpn_service
         Ignition.container_unit(
           'openvpn', @openvpn_image,
@@ -252,7 +277,7 @@ module Terrafying
             '/etc/ssl/openvpn:/etc/ssl/openvpn:ro',
             '/etc/openvpn:/etc/openvpn'
           ],
-          required_units: ['docker.service', 'network-online.target', 'openvpn-authz.service']
+          required_units: ['docker.service', 'network-online.target', 'openvpn-authz.service', 'add-iptables-rules.service']
         )
       end
 
