@@ -102,6 +102,7 @@ module Terrafying
           units: [prometheus_unit, thanos_sidecar_unit],
           files: [prometheus_conf, thanos_bucket],
           volumes: [prometheus_data_volume],
+          disable_update_engine: true,
           tags: {
             prometheus_port: 9090,
             prometheus_path: '/metrics',
@@ -133,6 +134,7 @@ module Terrafying
           ],
           instance_type: @thanos_instance_type,
           ami: @ami,
+          disable_update_engine: true,
           units: [thanos_unit(prometheus_thanos_sidecar_srv_fqdn)],
           instances: [{}] * @instances,
           loadbalancer: true,
