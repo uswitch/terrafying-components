@@ -33,7 +33,6 @@ pipeline:
       - rake push
     when:
       event: tag
-      branch: master
 
   docker-tag:
     image: plugins/docker
