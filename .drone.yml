@@ -45,4 +45,3 @@ pipeline:
     auto_tag: true
     when:
       event: tag
-      branch: master
