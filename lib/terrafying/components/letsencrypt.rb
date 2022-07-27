@@ -171,7 +171,6 @@ module Terrafying
                      ecdsa_curve: options[:curve]
 
         ctx.resource :tls_cert_request, key_ident,
-                     key_algorithm: 'ECDSA',
                      private_key_pem: output_of(:tls_private_key, key_ident, :private_key_pem),
                      subject: {
                        common_name: options[:common_name],
