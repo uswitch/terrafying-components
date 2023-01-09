@@ -92,7 +92,7 @@ module Terrafying
           resource :aws_iam_role_policy_attachment, "#{ident}-config-policy", {
                      provider: @provider,
                      role: role["name"],
-                     policy_arn: "arn:aws:iam::aws:policy/service-role/AWSConfigRole",
+                     policy_arn: "arn:aws:iam::aws:policy/service-role/AWS_ConfigRole",
                    }
 
           recorder = resource :aws_config_configuration_recorder, ident, {
