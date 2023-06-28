@@ -10,8 +10,8 @@ module Terrafying
 
       class Trail < Terrafying::Context
 
-        def self.create(*args)
-          Trail.new.create(*args)
+        def self.create(name, **args)
+          Trail.new.create(name, **args)
         end
 
         def self.bucket_statements(bucket_name)

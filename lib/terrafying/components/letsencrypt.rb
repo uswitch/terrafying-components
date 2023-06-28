@@ -101,7 +101,7 @@ module Terrafying
 
         @ca_cert_acl = options[:public_certificate] ? 'public-read' : 'private'
 
-        open(@acme_provider[:ca_cert], 'rb') do |cert|
+        URI.open(@acme_provider[:ca_cert]) do |cert|
           @ca_cert = cert.read
         end
 
