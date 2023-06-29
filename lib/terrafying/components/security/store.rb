@@ -12,8 +12,8 @@ module Terrafying
 
         attr_reader :name, :arn, :key_arn
 
-        def self.create(*args)
-          Store.new.create(*args)
+        def self.create(name, **args)
+          Store.new.create(name, **args)
         end
 
         def create(

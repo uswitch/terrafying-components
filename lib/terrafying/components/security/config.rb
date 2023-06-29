@@ -10,8 +10,8 @@ module Terrafying
 
       class Config < Terrafying::Context
 
-        def self.create(*args)
-          Config.new.create(*args)
+        def self.create(name,**args)
+          Config.new.create(name,**args)
         end
 
         def self.bucket_statements(bucket_name)
