@@ -55,7 +55,7 @@ jobs:
           images: quay.io/uswitch/terrafying-components
           tags: |
             type=sha,prefix=,format=long,
-            type=ref,event=branch
+            type=semver,pattern={{version}}
       - uses: docker/build-push-action@v4
         with:
           context: .
