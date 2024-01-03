@@ -29,6 +29,10 @@ jobs:
           ruby-version: 3.2.2
       - run: rake version
       - run: rake build
+      - uses: actions/upload-artifact@v3
+        with:
+          name: pkg
+          path: pkg/
 
   docker:
     needs: build
@@ -41,6 +45,10 @@ jobs:
           registry: quay.io
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}
+      - uses: actions/download-artifact@v3
+        with:
+          name: pkg
+          path: pkg/
       - id: meta
         uses: docker/metadata-action@v4
         with:
