@@ -37,8 +37,6 @@ jobs:
   docker:
     needs: build
     runs-on: ubuntu-latest
-    env:
-      RUBYGEMS_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}  
     steps:
       - uses: actions/checkout@v4
       - name: Login to Quay.io
