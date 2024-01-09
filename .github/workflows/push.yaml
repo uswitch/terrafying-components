@@ -1,6 +1,9 @@
 name: push
 
-on: push
+on:
+  push:
+    branches:
+      - '**'
 
 permissions:
   contents: read
@@ -53,13 +56,10 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: quay.io/uswitch/terrafying-components
-          tags: |
-            type=sha,prefix=,format=long,
-            type=semver,pattern={{version}}
+          tags: type=sha,prefix=,format=long,
       - uses: docker/build-push-action@v4
         with:
           context: .
           labels: ${{ steps.meta.outputs.labels }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          build-args: "TERRAFYING_VERSION=${{ contains(github.ref, 'refs/tags/') && github.ref_name || '0.0.0' }}"
