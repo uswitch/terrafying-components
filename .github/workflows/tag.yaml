@@ -73,6 +73,6 @@ jobs:
         with:
           context: .
           labels: ${{ steps.meta.outputs.labels }}
-          push: true
+          push: false
           tags: ${{ steps.meta.outputs.tags }}
           build-args: "TERRAFYING_VERSION=${{ github.ref_name }}"
