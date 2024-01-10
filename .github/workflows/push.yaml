@@ -18,7 +18,6 @@ jobs:
         with:
           bundler-cache: true
           ruby-version: 3.2.2
-      - run: bundle install
       - run: rake spec
 
   build:
