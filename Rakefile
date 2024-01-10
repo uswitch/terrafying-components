@@ -22,9 +22,9 @@ task :push do
   sh("gem push --config-file .gemconfig pkg/terrafying-components-#{terrafying_version}.gem")
 end
 
-desc 'Update the version for terrafying-components to DRONE_TAG. (0.0.0 if DRONE_TAG not set)'
+desc 'Update the version for terrafying-components to GHA_TERRAFYING_VERSION. (0.0.0 if GHA_TERRAFYING_VERSION not set)'
 task :version do
-  ver = ENV['DRONE_TAG'] || '0.0.0'
+  ver = ENV['GHA_TERRAFYING_VERSION'] || '0.0.0'
   version_file = 'lib/terrafying/components/version.rb'
   content = File.read(version_file).gsub(/0\.0\.0/, ver)
   File.open(version_file, 'w') { |file| file.puts content }
