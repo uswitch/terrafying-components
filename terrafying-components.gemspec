@@ -22,6 +22,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rspec', '~> 3.7'
   spec.add_development_dependency 'rspec-mocks', '~> 3.7'
 
-  spec.add_runtime_dependency 'terrafying', '>= 1.8.0'
-  spec.add_runtime_dependency 'xxhash', '~> 0.4.0'
+  spec.add_runtime_dependency 'terrafying', '>= 1.8.7'
+  spec.add_runtime_dependency 'xxhash', '~> 0.7.0'
 end
