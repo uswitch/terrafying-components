@@ -17,7 +17,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-          ruby-version: 3.2.2
+          ruby-version: 3.4.8
       - run: rake spec
 
   build:
@@ -28,7 +28,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-          ruby-version: 3.2.2
+          ruby-version: 3.4.8
       - run: rake version
       - run: rake build
       - uses: actions/upload-artifact@v4
